@@ -29,14 +29,16 @@
   for (let i = 255; i < 512; i++) EXP[i] = EXP[i - 255];
   const mul = (a, b) => (a && b ? EXP[LOG[a] + LOG[b]] : 0);
 
+  const GEN_CACHE = {};
   function rsGenerator(n) {
+    if (GEN_CACHE[n]) return GEN_CACHE[n];
     let g = [1];
     for (let i = 0; i < n; i++) {
       const next = new Array(g.length + 1).fill(0);
       for (let j = 0; j < g.length; j++) { next[j] ^= g[j]; next[j + 1] ^= mul(g[j], EXP[i]); }
       g = next;
     }
-    return g;
+    return (GEN_CACHE[n] = g);
   }
   function rsRemainder(data, n) {
     const g = rsGenerator(n);
@@ -184,9 +186,11 @@
         if (i < size && get(i) === get(i - 1)) run++;
         else { if (run >= 5) s += run - 2; run = 1; }
       }
-      for (let i = 0; i + 10 < size; i++) {
-        const seq = Array.from({ length: 11 }, (_, k) => get(i + k)).join("");
-        if (seq === "10111010000" || seq === "00001011101") s += 40;
+      // N3: finder-like 1011101 with 4 light modules on either side, matched as an 11-bit window
+      let win = 0;
+      for (let i = 0; i < size; i++) {
+        win = ((win << 1) | get(i)) & 0x7ff;
+        if (i >= 10 && (win === 0x5d0 || win === 0x05d)) s += 40;
       }
       return s;
     };

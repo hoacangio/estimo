@@ -4,6 +4,16 @@
    All user-provided strings go through esc() before rendering.
    ============================================================ */
 
+// Web fonts are injected from script so they never block first paint
+// (system fallbacks render immediately, then swap in).
+function loadFont(href) {
+  if (document.querySelector(`link[data-font="${href}"]`)) return;
+  const l = document.createElement("link");
+  l.rel = "stylesheet"; l.href = href; l.dataset.font = href;
+  document.head.appendChild(l);
+}
+loadFont("https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap");
+
 const LS = {
   get(k, d) { try { const v = localStorage.getItem("estimo." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem("estimo." + k, JSON.stringify(v)); } catch {} },
@@ -139,8 +149,37 @@ function disconnect() {
 }
 function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
 
+/* Optimistic voting: the card flips instantly, the message is sent in parallel,
+   and the next server snapshot is the source of truth. */
+function applyOptimisticVote(s, v) {
+  s.mine = v;
+  const me = s.participants.find((p) => p.id === s.you);
+  if (me) me.voted = v !== null;
+}
+function vote(card) {
+  const s = ui.state;
+  if (!s || s.revealed || !ws || ws.readyState !== 1) return;
+  const next = s.mine === card ? null : card; // clicking your card again withdraws it
+  ui.pendingVote = { v: next, deck: s.deck, at: performance.now() };
+  applyOptimisticVote(s, next);
+  render();                       // instant feedback
+  send({ t: "vote", v: card });   // server round trip runs in the background
+}
+
 function onState(s) {
   const prev = ui.state;
+  // The server only sends `decks` and `history` on first sync or when they change.
+  if (!s.decks) s.decks = prev?.decks;
+  if (!s.history) s.history = prev?.history || [];
+  if (!s.decks) return; // not synced yet (should not happen: first state is always full)
+  // Keep an optimistic vote until the server confirms it, so a broadcast caused by
+  // someone else (sent before ours was processed) doesn't flicker the card back.
+  const pv = ui.pendingVote;
+  if (pv) {
+    const confirmed = s.mine === pv.v || s.revealed || s.deck !== pv.deck;
+    if (confirmed || performance.now() - pv.at > 3000) ui.pendingVote = null;
+    else applyOptimisticVote(s, pv.v);
+  }
   ui.state = s;
   // Brand-new room created from Home: apply the chosen deck once.
   if (ui.pendingDeck) {
@@ -540,7 +579,7 @@ document.addEventListener("click", (e) => {
   switch (act) {
     case "theme": toggleTheme(); break;
     case "homeDeck": ui.homeDeck = el.dataset.deck; LS.set("lastDeck", ui.homeDeck); render(); break;
-    case "vote": send({ t: "vote", v: el.dataset.v }); break;
+    case "vote": vote(el.dataset.v); break;
     case "reveal": send({ t: "reveal" }); break;
     case "reset": send({ t: "reset" }); break;
     case "skip": send({ t: "next", topic: "" }); break;
@@ -595,7 +634,7 @@ document.addEventListener("keydown", (e) => {
   if (/^[0-9]$/.test(e.key)) {
     const cards = s.decks[s.deck].cards;
     const want = e.key === "0" ? (cards.includes("10") ? "10" : "0") : e.key;
-    if (cards.includes(want)) send({ t: "vote", v: want });
+    if (cards.includes(want)) vote(want);
   }
 });
 async function copy(text) {

@@ -110,6 +110,7 @@ export class Room extends DurableObject {
     const me = ws.deserializeAttachment() ?? {};
     const s = this.s;
     let persist = true;
+    let historyChanged = false;
 
     if (msg.t !== "join" && !me.id) return; // must join first
 
@@ -159,6 +160,7 @@ export class Room extends DurableObject {
           const final = typeof msg.final === "string" && DECKS[s.deck].cards.includes(msg.final) ? msg.final : null;
           s.history.unshift({ topic: s.topic || "Untitled", deck: s.deck, final, votes, at: Date.now() });
           s.history.length = Math.min(s.history.length, MAX_HISTORY);
+          historyChanged = true;
         }
         s.revealed = false;
         s.votes = {};
@@ -176,6 +178,7 @@ export class Room extends DurableObject {
         break;
       case "clearHistory":
         s.history = [];
+        historyChanged = true;
         break;
       case "emote": { // lightweight, not persisted
         if (!EMOTES.includes(msg.e)) return;
@@ -190,7 +193,7 @@ export class Room extends DurableObject {
       await this.ctx.storage.put("s", s);
       await this.ctx.storage.setAlarm(Date.now() + ROOM_TTL_MS);
     }
-    this.#broadcast();
+    this.#broadcast(undefined, historyChanged);
   }
 
   // Inactive rooms are wiped after ROOM_TTL_MS without a change.
@@ -243,7 +246,7 @@ export class Room extends DurableObject {
 
   // Each socket gets its own view: hidden votes are never sent before reveal,
   // and secret client ids never leave the server (only their salted hash `pid`).
-  #broadcast(exclude) {
+  #broadcast(exclude, historyChanged = false) {
     const s = this.s;
     const live = this.#sockets(exclude);
     const people = new Map(); // dedupe multiple tabs of the same user
@@ -259,19 +262,22 @@ export class Room extends DurableObject {
       vote: s.revealed ? (own(s.votes, p.id) ? s.votes[p.id] : null) : undefined,
     }));
 
-    const base = {
-      t: "state",
-      topic: s.topic,
-      deck: s.deck,
-      decks: DECKS,
-      revealed: s.revealed,
-      participants,
-      history: s.history,
-    };
+    // Shared part is serialised once; per-socket fields are appended as strings.
+    // `decks` and `history` are only sent to sockets that have not synced yet,
+    // or when they changed — a vote broadcast stays ~1 KB instead of ~10 KB.
+    const shared = JSON.stringify({ t: "state", topic: s.topic, deck: s.deck, revealed: s.revealed, participants }).slice(0, -1);
+    let historyJson = null, decksJson = null;
     for (const w of live) {
       const a = w.deserializeAttachment();
       if (!a?.id) continue;
-      try { w.send(JSON.stringify({ ...base, you: a.pid, mine: own(s.votes, a.id) ? s.votes[a.id] : null })); } catch {}
+      const mine = own(s.votes, a.id) ? s.votes[a.id] : null;
+      let msg = `${shared},"you":${JSON.stringify(a.pid)},"mine":${JSON.stringify(mine)}`;
+      if (!a.synced || historyChanged) msg += `,"history":${(historyJson ??= JSON.stringify(s.history))}`;
+      if (!a.synced) {
+        msg += `,"decks":${(decksJson ??= JSON.stringify(DECKS))}`;
+        w.serializeAttachment({ ...a, synced: true });
+      }
+      try { w.send(msg + "}"); } catch {}
     }
   }
 }
