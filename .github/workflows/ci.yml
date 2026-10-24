@@ -21,14 +21,16 @@ jobs:
           node --check src/worker.js
           node --check src/decks.js
           node --check scripts/local-server.mjs
-          sed -n '/<script>/,/<\/script>/p' public/index.html | sed '1d;$d' > /tmp/client.js
-          node --check /tmp/client.js
+          node --check public/app.js
+          node --check test/security.test.mjs
       - name: Smoke test (offline server)
         run: |
           node scripts/local-server.mjs 8787 &
           for i in $(seq 1 20); do curl -fs http://localhost:8787/api/health && break; sleep 0.5; done
           curl -fs http://localhost:8787/r/calm-otter-42 | grep -q "<title>Estimo"
           curl -fs http://localhost:8787/qr.js | grep -q "EstimoQR"
+      - name: Security tests (protocol)
+        run: node test/security.test.mjs http://localhost:8787
 
   deploy:
     needs: check

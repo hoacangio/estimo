@@ -2,11 +2,32 @@ import { DurableObject } from "cloudflare:workers";
 import { DECKS, DEFAULT_DECK } from "./decks.js";
 
 const ROOM_RE = /^[a-z0-9-]{3,40}$/;
+// Random UUID generated in the browser; anything else (low-entropy or prototype names) is refused
+const CLIENT_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_HISTORY = 30;
+const MAX_MESSAGE_CHARS = 2000;
 const ROOM_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+export const MAX_CONNECTIONS = 100;           // sockets per room
+const RATE = { burst: 20, perSecond: 5, dropLimit: 40 }; // per-socket token bucket
+const EMOTES = ["👍", "🎉", "🤔", "🔥"];
 
 const clean = (v, max) =>
-  typeof v === "string" ? v.replace(/[\u0000-\u001f]/g, "").trim().slice(0, max) : "";
+  typeof v === "string" ? v.replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, max) : "";
+
+// Own-property lookups only, so "constructor" or "__proto__" never resolve.
+export const hasDeck = (k) => typeof k === "string" && Object.hasOwn(DECKS, k);
+const own = (obj, k) => Object.hasOwn(obj, k);
+
+/** Browsers always send Origin on WebSocket upgrades; refuse other sites (CSWSH). */
+export function isAllowedOrigin(origin, host) {
+  if (!origin) return true; // non-browser clients (CLI, tests) send none
+  try { return new URL(origin).host === host; } catch { return false; }
+}
+
+async function publicId(secret, salt) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${salt}:${secret}`));
+  return [...new Uint8Array(buf)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 /* ------------------------------------------------------------------ *
  * Edge entry: static assets are served by Cloudflare before this runs.
@@ -22,6 +43,8 @@ export default {
       if (!ROOM_RE.test(room)) return new Response("Bad room id", { status: 400 });
       if (req.headers.get("Upgrade") !== "websocket")
         return new Response("Expected WebSocket", { status: 426 });
+      if (!isAllowedOrigin(req.headers.get("Origin"), url.host))
+        return new Response("Forbidden origin", { status: 403 });
       const stub = env.ROOM.get(env.ROOM.idFromName(room));
       return stub.fetch(req);
     }
@@ -35,35 +58,54 @@ export default {
 /* ------------------------------------------------------------------ *
  * One Durable Object instance = one room.
  * Uses the WebSocket Hibernation API so idle rooms cost nothing.
+ *
+ * Identity: each browser keeps a random secret `clientId`. The server only
+ * ever broadcasts a salted hash of it (`pid`), so other participants cannot
+ * learn the secret and impersonate someone to change their vote.
  * ------------------------------------------------------------------ */
 export class Room extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
     this.s = null;
+    this.buckets = new WeakMap(); // ws -> rate-limit bucket (in-memory, reset on hibernation)
     ctx.blockConcurrencyWhile(async () => {
-      this.s = (await ctx.storage.get("s")) ?? {
-        topic: "",
-        deck: DEFAULT_DECK,
-        revealed: false,
-        votes: {}, // clientId -> card
-        history: [], // [{ topic, deck, votes: {name: card}, at }]
-      };
+      this.s = (await ctx.storage.get("s")) ?? Room.empty();
+      if (!hasDeck(this.s.deck)) this.s.deck = DEFAULT_DECK; // repair rooms saved by older versions
     });
     // Heartbeats answered without waking the object
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
   }
 
+  static empty() {
+    return { topic: "", deck: DEFAULT_DECK, revealed: false, votes: {}, history: [] };
+  }
+
   async fetch() {
+    if (this.ctx.getWebSockets().length >= MAX_CONNECTIONS)
+      return new Response("Room is full", { status: 429 });
     const { 0: client, 1: server } = new WebSocketPair();
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ id: null, name: "", spectator: false });
+    server.serializeAttachment({ id: null, pid: null, name: "", spectator: false });
     return new Response(null, { status: 101, webSocket: client });
   }
 
+  #allow(ws) {
+    const now = Date.now();
+    const b = this.buckets.get(ws) ?? { tokens: RATE.burst, t: now, dropped: 0 };
+    b.tokens = Math.min(RATE.burst, b.tokens + ((now - b.t) / 1000) * RATE.perSecond);
+    b.t = now;
+    this.buckets.set(ws, b);
+    if (b.tokens >= 1) { b.tokens -= 1; return true; }
+    if (++b.dropped >= RATE.dropLimit) { try { ws.close(1008, "Rate limit exceeded"); } catch {} }
+    return false;
+  }
+
   async webSocketMessage(ws, raw) {
-    if (typeof raw !== "string" || raw.length > 2000) return;
+    if (typeof raw !== "string" || raw.length > MAX_MESSAGE_CHARS) return;
+    if (!this.#allow(ws)) return;
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
+    if (!msg || typeof msg !== "object" || Array.isArray(msg) || typeof msg.t !== "string") return;
 
     const me = ws.deserializeAttachment() ?? {};
     const s = this.s;
@@ -73,10 +115,11 @@ export class Room extends DurableObject {
 
     switch (msg.t) {
       case "join": {
-        const id = clean(msg.id, 40);
+        const id = typeof msg.id === "string" && CLIENT_ID_RE.test(msg.id) ? msg.id : "";
         const name = clean(msg.name, 24);
         if (!id || !name) return;
-        ws.serializeAttachment({ id, name, spectator: !!msg.spectator });
+        const pid = await publicId(id, this.ctx.id.toString());
+        ws.serializeAttachment({ id, pid, name, spectator: msg.spectator === true });
         persist = false;
         break;
       }
@@ -88,8 +131,8 @@ export class Room extends DurableObject {
         break;
       }
       case "spectator": {
-        this.#updateSockets(me.id, { spectator: !!msg.on });
-        if (msg.on) delete s.votes[me.id];
+        this.#updateSockets(me.id, { spectator: msg.on === true });
+        if (msg.on === true) delete s.votes[me.id];
         break;
       }
       case "vote": {
@@ -113,7 +156,7 @@ export class Room extends DurableObject {
           const names = this.#nameMap();
           const votes = {};
           for (const [id, v] of Object.entries(s.votes)) votes[names[id] ?? "—"] = v;
-          const final = DECKS[s.deck].cards.includes(msg.final) ? msg.final : null;
+          const final = typeof msg.final === "string" && DECKS[s.deck].cards.includes(msg.final) ? msg.final : null;
           s.history.unshift({ topic: s.topic || "Untitled", deck: s.deck, final, votes, at: Date.now() });
           s.history.length = Math.min(s.history.length, MAX_HISTORY);
         }
@@ -126,7 +169,7 @@ export class Room extends DurableObject {
         s.topic = clean(msg.text, 200);
         break;
       case "deck":
-        if (!DECKS[msg.deck] || s.deck === msg.deck) return;
+        if (!hasDeck(msg.deck) || s.deck === msg.deck) return;
         s.deck = msg.deck;
         s.votes = {};
         s.revealed = false;
@@ -135,9 +178,8 @@ export class Room extends DurableObject {
         s.history = [];
         break;
       case "emote": { // lightweight, not persisted
-        const e = clean(msg.e, 4);
-        if (!["👍", "🎉", "🤔", "🔥"].includes(e)) return;
-        this.#send({ t: "emote", from: me.id, e });
+        if (!EMOTES.includes(msg.e)) return;
+        this.#send({ t: "emote", from: me.pid, e: msg.e });
         return;
       }
       default:
@@ -158,7 +200,7 @@ export class Room extends DurableObject {
       return;
     }
     await this.ctx.storage.deleteAll();
-    this.s = { topic: "", deck: DEFAULT_DECK, revealed: false, votes: {}, history: [] };
+    this.s = Room.empty();
   }
 
   async webSocketClose(ws, code) {
@@ -199,7 +241,8 @@ export class Room extends DurableObject {
     }
   }
 
-  // Each socket gets its own view: hidden votes are never sent before reveal.
+  // Each socket gets its own view: hidden votes are never sent before reveal,
+  // and secret client ids never leave the server (only their salted hash `pid`).
   #broadcast(exclude) {
     const s = this.s;
     const live = this.#sockets(exclude);
@@ -209,11 +252,11 @@ export class Room extends DurableObject {
       if (a?.id) people.set(a.id, a);
     }
     const participants = [...people.values()].map((p) => ({
-      id: p.id,
+      id: p.pid,
       name: p.name,
       spectator: p.spectator,
-      voted: p.id in s.votes,
-      vote: s.revealed ? s.votes[p.id] ?? null : undefined,
+      voted: own(s.votes, p.id),
+      vote: s.revealed ? (own(s.votes, p.id) ? s.votes[p.id] : null) : undefined,
     }));
 
     const base = {
@@ -228,7 +271,7 @@ export class Room extends DurableObject {
     for (const w of live) {
       const a = w.deserializeAttachment();
       if (!a?.id) continue;
-      try { w.send(JSON.stringify({ ...base, mine: s.votes[a.id] ?? null })); } catch {}
+      try { w.send(JSON.stringify({ ...base, you: a.pid, mine: own(s.votes, a.id) ? s.votes[a.id] : null })); } catch {}
     }
   }
 }

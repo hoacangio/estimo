@@ -24,15 +24,16 @@ const src = (await fs.readFile(path.join(ROOT, "src/worker.js"), "utf8"))
   .replace(/from\s*["']\.\/decks\.js["']/, `from ${JSON.stringify(url.pathToFileURL(path.join(ROOT, "src/decks.js")).href)}`);
 const tmp = path.join(ROOT, "scripts", ".worker.local.mjs");
 await fs.writeFile(tmp, src);
-const { Room } = await import(url.pathToFileURL(tmp).href + `?t=${Date.now()}`);
+const { Room, isAllowedOrigin, MAX_CONNECTIONS } = await import(url.pathToFileURL(tmp).href + `?t=${Date.now()}`);
 await fs.unlink(tmp).catch(() => {});
 
 /* ---------- Durable Object runtime emulation ---------- */
-function makeCtx() {
+function makeCtx(roomId) {
   const sockets = new Set();
   const store = new Map();
   return {
     sockets,
+    id: { toString: () => crypto.createHash("sha256").update("room:" + roomId).digest("hex") },
     acceptWebSocket(ws) { sockets.add(ws); },
     getWebSockets() { return [...sockets].filter((s) => s.open); },
     setWebSocketAutoResponse() {},
@@ -45,13 +46,17 @@ function makeCtx() {
     },
   };
 }
-const rooms = new Map(); // roomId -> { room, ctx }
-async function getRoom(id) {
+// roomId -> Promise<{ room, ctx }>. The promise is stored synchronously so that
+// concurrent connections always share ONE instance, like idFromName() on Cloudflare.
+const rooms = new Map();
+function getRoom(id) {
   if (!rooms.has(id)) {
-    const ctx = makeCtx();
-    const room = new Room(ctx, {});
-    await new Promise((r) => setTimeout(r, 0)); // let blockConcurrencyWhile finish
-    rooms.set(id, { room, ctx });
+    rooms.set(id, (async () => {
+      const ctx = makeCtx(id);
+      const room = new Room(ctx, { ROOM_ID: id });
+      await new Promise((r) => setTimeout(r, 0)); // let blockConcurrencyWhile finish
+      return { room, ctx };
+    })());
   }
   return rooms.get(id);
 }
@@ -78,6 +83,10 @@ function wrapSocket(sock) {
 }
 
 async function handleUpgrade(req, sock, roomId) {
+  // Same checks as the Worker entry (origin) and Room.fetch (connection cap)
+  if (!isAllowedOrigin(req.headers.origin, req.headers.host)) { sock.end("HTTP/1.1 403 Forbidden\r\n\r\n"); return; }
+  const { ctx: c } = await getRoom(roomId);
+  if (c.getWebSockets().length >= MAX_CONNECTIONS) { sock.end("HTTP/1.1 429 Too Many Requests\r\n\r\n"); return; }
   const key = req.headers["sec-websocket-key"];
   const accept = crypto.createHash("sha1").update(key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").digest("base64");
   sock.write(`HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`);
@@ -119,6 +128,15 @@ async function handleUpgrade(req, sock, roomId) {
 }
 
 /* ---------- static files + routing (mirrors wrangler.toml) ---------- */
+// Apply the "/*" block of public/_headers, as Workers Static Assets does in production
+const HEADERS = {};
+try {
+  let inBlock = false;
+  for (const line of (await fs.readFile(path.join(ROOT, "public/_headers"), "utf8")).split(/\r?\n/)) {
+    if (/^\S/.test(line)) inBlock = line.trim() === "/*";
+    else if (inBlock && line.includes(":")) { const i = line.indexOf(":"); HEADERS[line.slice(0, i).trim()] = line.slice(i + 1).trim(); }
+  }
+} catch {}
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".json": "application/json", ".ico": "image/x-icon" };
 const server = http.createServer(async (req, res) => {
   const p = decodeURIComponent(new URL(req.url, "http://x").pathname);
@@ -128,7 +146,8 @@ const server = http.createServer(async (req, res) => {
   catch { file = path.join(ROOT, "public", "index.html"); } // single-page-application fallback
   try {
     const body = await fs.readFile(file);
-    res.writeHead(200, { "content-type": TYPES[path.extname(file)] || "application/octet-stream" });
+    if (path.basename(file) === "_headers") throw new Error("hidden");
+    res.writeHead(200, { ...HEADERS, "content-type": TYPES[path.extname(file)] || "application/octet-stream" });
     res.end(body);
   } catch { res.writeHead(404); res.end("Not found"); }
 });
