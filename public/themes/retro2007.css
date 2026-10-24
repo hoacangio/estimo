@@ -4,7 +4,7 @@
    [data-theme="retro2007"], so the default theme is never affected.
    ===================================================================== */
 
-[data-theme="retro2007"] {
+:root[data-theme="retro2007"] {
   --r-sky: #d9eefc; --r-sky-deep: #9fd0f2; --r-paper: #fff; --r-panel: #f4f8fb;
   --r-ink: #333; --r-ink-soft: #5f6368; --r-line: #cfd8df;
   --r-blue: #1f74c4; --r-blue-dark: #0d4f8f;

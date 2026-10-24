@@ -1,0 +1,134 @@
+/* =====================================================================
+   Estimo — "Mission Control" theme: a spacecraft HUD.
+   Inspired by flight-control interfaces in general; no brand names or logos.
+   Loaded lazily; every rule is scoped under [data-theme="mission"].
+   ===================================================================== */
+
+:root[data-theme="mission"] {
+  --bg: #05080f; --surface: #0b1220; --surface-2: #0e1729;
+  --border: #1c2a44; --border-strong: #2b4268; --dash: #3f5a85;
+  --ink: #e6f1ff; --ink-2: #c5d6ee; --muted: #8aa0bf;
+  --accent: #3fd0ff; --accent-ink: #6fdcff; --accent-soft: #0f2a3d; --accent-soft-ink: #9be7ff;
+  --btn: #3fd0ff; --btn-ink: #031018; --good: #4cff9a; --bad: #ff6b6b;
+  --outlier: #ffb020; --outlier-bg: #2a1e05; --outlier-ink: #ffc95c;
+  --track: #1c2a44; --bar-2: #1f5f7f; --shadow: rgba(0, 0, 0, .6); --overlay: rgba(2, 6, 14, .8);
+  --serif: Orbitron, "Eurostile", "Bank Gothic", sans-serif;
+  --sans: "Share Tech Mono", "SF Mono", Menlo, monospace;
+  --mono: "Share Tech Mono", "SF Mono", Menlo, monospace;
+  --m-glow: 0 0 12px rgba(63, 208, 255, .45);
+  color-scheme: dark;
+}
+
+/* starfield grid + faint scanlines */
+[data-theme="mission"] body {
+  background:
+    linear-gradient(rgba(63, 208, 255, .055) 1px, transparent 1px) 0 0 / 40px 40px,
+    linear-gradient(90deg, rgba(63, 208, 255, .055) 1px, transparent 1px) 0 0 / 40px 40px,
+    radial-gradient(ellipse 90% 60% at 50% 0, #0c1e36, #05080f 70%) #05080f;
+  background-attachment: fixed;
+}
+[data-theme="mission"] body::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 50;
+  background: repeating-linear-gradient(0deg, rgba(255, 255, 255, .025) 0 1px, transparent 1px 3px);
+}
+
+/* HUD header */
+[data-theme="mission"] .topbar,
+[data-theme="mission"] .home header {
+  background: linear-gradient(180deg, #0b1527, #070d19); border-bottom: 1px solid var(--accent);
+  box-shadow: 0 1px 16px rgba(63, 208, 255, .25);
+}
+[data-theme="mission"] .logo b { font-family: var(--serif); font-weight: 700; letter-spacing: 4px; text-transform: uppercase; font-size: 18px; color: var(--accent-ink); text-shadow: var(--m-glow); }
+[data-theme="mission"] .logo .back { stroke: var(--accent); }
+[data-theme="mission"] .logo .front { fill: var(--accent); }
+[data-theme="mission"] .live { text-transform: uppercase; letter-spacing: 2px; }
+[data-theme="mission"] .live::before { box-shadow: 0 0 8px currentColor; animation: m-blink 1.6s steps(2, start) infinite; }
+@keyframes m-blink { to { opacity: .25; } }
+[data-theme="mission"] .code { color: var(--accent-ink); }
+[data-theme="mission"] .code::before { content: "MISSION // "; color: var(--muted); }
+
+/* type */
+[data-theme="mission"] .hero h1, [data-theme="mission"] .box h2, [data-theme="mission"] .dialog h2 {
+  font-family: var(--serif); font-weight: 700; text-transform: uppercase; letter-spacing: 3px;
+}
+[data-theme="mission"] .hero h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.15; text-shadow: var(--m-glow); }
+[data-theme="mission"] .hero .eyebrow { color: var(--good); letter-spacing: 3px; text-transform: uppercase; }
+[data-theme="mission"] .hero .eyebrow::before { content: "● SYSTEMS NOMINAL // "; }
+[data-theme="mission"] .box h2 { font-size: 14px; color: var(--accent-ink); }
+[data-theme="mission"] .topic label, [data-theme="mission"] .kpi span, [data-theme="mission"] .label { text-transform: uppercase; letter-spacing: 2px; }
+[data-theme="mission"] .topic input { font-family: var(--sans); font-size: 20px; color: var(--accent-ink); }
+
+/* panels with HUD corner brackets */
+[data-theme="mission"] .card {
+  border-radius: 2px; border: 1px solid rgba(63, 208, 255, .28);
+  background:
+    linear-gradient(var(--accent), var(--accent)) top left / 14px 2px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) top left / 2px 14px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) top right / 14px 2px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) top right / 2px 14px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) bottom left / 14px 2px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) bottom left / 2px 14px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) bottom right / 14px 2px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) bottom right / 2px 14px no-repeat,
+    linear-gradient(180deg, rgba(14, 23, 41, .92), rgba(8, 14, 26, .92));
+}
+[data-theme="mission"] .panel { box-shadow: 0 0 40px rgba(63, 208, 255, .08); }
+
+/* buttons: outlined consoles, cyan primary */
+[data-theme="mission"] .btn { border-radius: 2px; background: transparent; border-color: var(--border-strong); color: var(--ink); text-transform: uppercase; letter-spacing: 1.5px; font-family: var(--sans); }
+[data-theme="mission"] .btn:hover:not(:disabled) { border-color: var(--accent); box-shadow: var(--m-glow); }
+[data-theme="mission"] .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--btn-ink); box-shadow: var(--m-glow); }
+[data-theme="mission"] .btn-accent { background: transparent; border: 1px solid var(--good); color: var(--good); }
+[data-theme="mission"] .btn-danger { border-color: var(--bad); color: var(--bad); }
+[data-theme="mission"] .chip { border-radius: 2px; background: transparent; border-color: var(--border-strong); color: var(--ink-2); font-family: var(--sans); }
+[data-theme="mission"] .chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); box-shadow: var(--m-glow); }
+[data-theme="mission"] .input, [data-theme="mission"] select.select { border-radius: 2px; background: #07101e; border-color: var(--border-strong); font-family: var(--sans); }
+
+/* the table is a radar scope with a slow sweep */
+[data-theme="mission"] .table {
+  position: relative; overflow: hidden; border-radius: 2px; border: 1px solid rgba(63, 208, 255, .3);
+  background:
+    repeating-radial-gradient(circle at 50% 110%, rgba(63, 208, 255, .13) 0 1px, transparent 1px 64px),
+    linear-gradient(90deg, transparent 49.9%, rgba(63, 208, 255, .12) 50%, transparent 50.1%),
+    radial-gradient(ellipse at 50% 100%, #0b2033, #06101c 70%);
+}
+[data-theme="mission"] .table::before {
+  content: ""; position: absolute; left: 50%; top: 110%; width: 1400px; height: 1400px; margin: -700px 0 0 -700px;
+  background: conic-gradient(from 0deg, rgba(63, 208, 255, .18), transparent 40deg);
+  animation: m-sweep 6s linear infinite; pointer-events: none;
+}
+@keyframes m-sweep { to { transform: rotate(360deg); } }
+[data-theme="mission"] .table > * { position: relative; }
+[data-theme="mission"] .pcard { border-radius: 2px; font-family: var(--serif); font-weight: 700; font-size: 26px; }
+[data-theme="mission"] .pcard.empty { border: 1px dashed var(--dash); }
+[data-theme="mission"] .pcard.down {
+  background: repeating-linear-gradient(135deg, rgba(63, 208, 255, .9) 0 4px, rgba(63, 208, 255, .45) 4px 8px);
+  border: 2px solid #05080f; box-shadow: 0 0 0 1px var(--accent), var(--m-glow);
+}
+[data-theme="mission"] .pcard.up { background: #07101e; border: 1px solid var(--accent); color: var(--accent-ink); text-shadow: var(--m-glow); }
+[data-theme="mission"] .pcard.up.outlier { background: var(--outlier-bg); border: 1px dashed var(--outlier); color: var(--outlier-ink); text-shadow: none; }
+[data-theme="mission"] .seat .name { font-family: var(--sans); text-transform: uppercase; font-size: 12px; letter-spacing: 0; }
+
+/* voting cards are telemetry tiles */
+[data-theme="mission"] .vcard {
+  border-radius: 2px; font-family: var(--serif); font-weight: 700; font-size: 22px; color: var(--accent-ink);
+  background: linear-gradient(180deg, #0e1a2e, #08111f); border: 1px solid var(--border-strong);
+}
+[data-theme="mission"] .vcard:hover:not(:disabled) { border-color: var(--accent); box-shadow: var(--m-glow); }
+[data-theme="mission"] .vcard.meta { color: var(--muted); }
+[data-theme="mission"] .vcard[aria-pressed="true"] { background: var(--accent); color: var(--btn-ink); border-color: var(--accent); box-shadow: 0 0 24px rgba(63, 208, 255, .6); }
+
+/* go / no-go poll bar, readouts */
+[data-theme="mission"] .progress { height: 8px; border-radius: 0; background: #0b1527; border: 1px solid var(--border-strong); }
+[data-theme="mission"] .progress div { background: repeating-linear-gradient(90deg, var(--good) 0 10px, transparent 10px 13px); box-shadow: 0 0 8px rgba(76, 255, 154, .5); }
+[data-theme="mission"] .kpi b { font-family: var(--serif); font-weight: 700; color: var(--accent-ink); text-shadow: var(--m-glow); }
+[data-theme="mission"] .dist .bar { border-radius: 0; background: #0b1527; }
+[data-theme="mission"] .dist .bar div { border-radius: 0; background: var(--bar-2); }
+[data-theme="mission"] .dist .bar div.top { background: var(--accent); box-shadow: var(--m-glow); }
+[data-theme="mission"] .final .opt { border-radius: 2px; background: transparent; font-family: var(--serif); color: var(--accent-ink); }
+[data-theme="mission"] .final .opt[aria-pressed="true"] { background: var(--accent); color: var(--btn-ink); border-color: var(--accent); }
+[data-theme="mission"] .pts { font-family: var(--serif); background: transparent; border: 1px solid var(--border-strong); color: var(--accent-ink); }
+[data-theme="mission"] .fan div { border-radius: 2px; background: #0b1527; border-color: var(--border-strong); color: var(--accent-ink); font-family: var(--serif); }
+[data-theme="mission"] .fan div:nth-child(2) { background: var(--accent); color: var(--btn-ink); }
+[data-theme="mission"] .dialog { border-radius: 2px; border: 1px solid var(--accent); background: #0b1220; }
+[data-theme="mission"] .toast { background: #0b1220; color: var(--accent-ink); border: 1px solid var(--accent); font-family: var(--sans); text-transform: uppercase; letter-spacing: 1px; }

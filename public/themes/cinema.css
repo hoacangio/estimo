@@ -1,0 +1,104 @@
+/* =====================================================================
+   Estimo — "Cinema" theme: a dark, streaming-night look.
+   Inspired by movie-streaming apps in general; uses no brand names or logos.
+   Loaded lazily; every rule is scoped under [data-theme="cinema"].
+   ===================================================================== */
+
+:root[data-theme="cinema"] {
+  --bg: #141414; --surface: #1c1c1c; --surface-2: #101010;
+  --border: #2c2c2c; --border-strong: #454545; --dash: #5c5c5c;
+  --ink: #ffffff; --ink-2: #e5e5e5; --muted: #b3b3b3;
+  --accent: #e50914; --accent-ink: #ff5a62; --accent-soft: #3a0d10; --accent-soft-ink: #ffb3b7;
+  --btn: #ffffff; --btn-ink: #141414; --good: #46d369; --bad: #ff5a62;
+  --outlier: #f5c518; --outlier-bg: #2b2408; --outlier-ink: #ffd84d;
+  --track: #333; --bar-2: #5a5a5a; --shadow: rgba(0, 0, 0, .6); --overlay: rgba(0, 0, 0, .75);
+  --serif: "Bebas Neue", "Arial Narrow", Impact, sans-serif;
+  --sans: Archivo, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --c-red-deep: #b20710;
+  color-scheme: dark;
+}
+
+[data-theme="cinema"] body {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(229, 9, 20, .22), transparent 70%),
+    linear-gradient(180deg, #000 0, #141414 420px) #141414;
+  background-attachment: fixed;
+}
+
+/* header fades from black like a player overlay */
+[data-theme="cinema"] .topbar,
+[data-theme="cinema"] .home header {
+  background: linear-gradient(180deg, rgba(0, 0, 0, .95), rgba(0, 0, 0, .55));
+  border-bottom: 1px solid #262626; backdrop-filter: blur(6px);
+}
+[data-theme="cinema"] .logo b {
+  font-family: var(--serif); font-weight: 400; font-size: 30px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--accent); text-shadow: 0 2px 12px rgba(229, 9, 20, .45);
+}
+[data-theme="cinema"] .logo .front { fill: var(--accent); }
+[data-theme="cinema"] .logo .back { stroke: #fff; }
+
+/* type: condensed display caps */
+[data-theme="cinema"] .hero h1 {
+  font-family: var(--serif); font-size: clamp(44px, 6vw, 76px); line-height: .95; overflow-wrap: anywhere;
+  text-transform: uppercase; letter-spacing: 1px;
+}
+[data-theme="cinema"] .hero .eyebrow { color: var(--accent-ink); letter-spacing: 3px; text-transform: uppercase; font-size: 12px; font-weight: 700; }
+[data-theme="cinema"] .box h2, [data-theme="cinema"] .dialog h2 { font-family: var(--serif); font-size: 26px; letter-spacing: 1px; text-transform: uppercase; }
+[data-theme="cinema"] .topic label { text-transform: uppercase; letter-spacing: 2px; color: var(--accent-ink); font-weight: 700; font-size: 12px; }
+[data-theme="cinema"] .topic input { font-family: var(--sans); font-weight: 700; font-size: 22px; }
+
+/* buttons: white "play" primary, translucent grey secondary, red accent */
+[data-theme="cinema"] .btn { border: none; background: rgba(109, 109, 110, .55); color: #fff; border-radius: 4px; font-weight: 700; }
+[data-theme="cinema"] .btn:hover:not(:disabled) { background: rgba(109, 109, 110, .4); }
+[data-theme="cinema"] .btn-primary { background: #fff; color: #141414; }
+[data-theme="cinema"] .btn-primary:hover:not(:disabled) { background: rgba(255, 255, 255, .78); opacity: 1; }
+[data-theme="cinema"] .btn-accent { background: var(--c-red-deep); color: #fff; }
+[data-theme="cinema"] .btn-danger { background: transparent; border: 1px solid var(--bad); color: var(--bad); }
+[data-theme="cinema"] .chip { border-radius: 4px; background: #262626; border-color: #333; color: #e5e5e5; }
+[data-theme="cinema"] .chip[aria-pressed="true"] { background: var(--c-red-deep); border-color: var(--c-red-deep); color: #fff; }
+[data-theme="cinema"] .input, [data-theme="cinema"] select.select { background: #333; border-color: #4d4d4d; border-radius: 4px; }
+
+/* panels */
+[data-theme="cinema"] .card { border-radius: 6px; border-color: #262626; background: #181818; }
+[data-theme="cinema"] .panel { box-shadow: 0 20px 60px rgba(0, 0, 0, .7); }
+
+/* the table is a dark stage with a red spotlight */
+[data-theme="cinema"] .table {
+  background: radial-gradient(ellipse 70% 60% at 50% 0, rgba(229, 9, 20, .22), transparent 70%), #0b0b0b;
+  border: 1px solid #262626;
+}
+[data-theme="cinema"] .pcard { border-radius: 4px; font-family: var(--serif); font-weight: 400; font-size: 38px; }
+[data-theme="cinema"] .pcard.down {
+  background: repeating-linear-gradient(135deg, var(--c-red-deep) 0 5px, #e50914 5px 10px);
+  border: 2px solid #000; box-shadow: 0 0 0 1px #e50914, 0 8px 24px rgba(229, 9, 20, .35);
+}
+[data-theme="cinema"] .pcard.up { background: linear-gradient(160deg, #2b2b2b, #161616); border: 2px solid #e50914; color: #fff; }
+[data-theme="cinema"] .pcard.up.outlier { background: #2b2408; border: 2px dashed var(--outlier); color: var(--outlier-ink); }
+
+/* voting cards are poster tiles that grow on hover */
+[data-theme="cinema"] .vcard {
+  font-family: var(--serif); font-weight: 400; font-size: 34px; color: #fff; border-radius: 4px; border: none;
+  background: linear-gradient(160deg, #2f2f2f 0, #1a1a1a 100%); box-shadow: 0 4px 12px rgba(0, 0, 0, .6);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+[data-theme="cinema"] .vcard:hover:not(:disabled) { transform: scale(1.12); z-index: 1; box-shadow: 0 12px 28px rgba(0, 0, 0, .8); }
+[data-theme="cinema"] .vcard.meta { background: #222; color: var(--muted); }
+[data-theme="cinema"] .vcard[aria-pressed="true"] {
+  background: linear-gradient(160deg, #e50914, var(--c-red-deep)); color: #fff;
+  box-shadow: 0 0 0 2px #fff, 0 14px 30px rgba(229, 9, 20, .5); transform: translateY(-12px) scale(1.06);
+}
+
+[data-theme="cinema"] .kpi b { font-family: var(--serif); font-weight: 400; font-size: 52px; }
+[data-theme="cinema"] .kpi b.sm { font-size: 30px; }
+[data-theme="cinema"] .dist .bar { background: #262626; border-radius: 2px; }
+[data-theme="cinema"] .dist .bar div.top { background: #e50914; }
+[data-theme="cinema"] .progress { background: #4d4d4d; height: 4px; }
+[data-theme="cinema"] .progress div { background: #e50914; }
+[data-theme="cinema"] .final .opt { background: #262626; border-color: #333; color: #fff; font-family: var(--serif); font-size: 24px; border-radius: 4px; }
+[data-theme="cinema"] .final .opt[aria-pressed="true"] { background: var(--c-red-deep); border-color: #fff; color: #fff; }
+[data-theme="cinema"] .pts { background: #262626; font-family: var(--serif); font-weight: 400; font-size: 18px; }
+[data-theme="cinema"] .fan div { border-radius: 4px; background: #2b2b2b; border: none; color: #fff; font-family: var(--serif); font-size: 38px; }
+[data-theme="cinema"] .fan div:nth-child(2) { background: #e50914; }
+[data-theme="cinema"] .dialog { background: #181818; }
+[data-theme="cinema"] .qr { border-color: #333; }

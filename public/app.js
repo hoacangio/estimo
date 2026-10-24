@@ -57,38 +57,64 @@ const me = {
   set name(v) { LS.set("name", v); },
 };
 
-/* ---------------- themes: system | light | dark | retro2007 ---------------- */
+/* ---------------- themes ----------------
+   system | light | dark are built in. Fun themes live in /themes/<name>.css and
+   are loaded only when chosen, so the default theme downloads none of them. */
 const RETRO = "retro2007";
-function ensureRetroAssets() {
-  // Lazy: users who never turn on retro mode download 0 bytes of it.
-  if (!document.getElementById("retro-css")) {
+const FUN_THEMES = {
+  retro2007: { label: "Retro 2007", dark: false, font: "family=Varela+Round",
+               hello: "Chào mừng trở lại năm 2007! Xem tốt nhất ở 1024×768 ;)" },
+  cinema:    { label: "Cinema", dark: true, font: "family=Bebas+Neue&family=Archivo:wght@400;500;700",
+               hello: "Now showing: your sprint planning" },
+  samurai:   { label: "Samurai", dark: false, font: "family=Shippori+Mincho:wght@500;700&family=Yuji+Syuku",
+               hello: "道 — The way of the estimate" },
+  mission:   { label: "Mission Control", dark: true, font: "family=Orbitron:wght@500;700&family=Share+Tech+Mono",
+               hello: "All systems go. Mission control online." },
+};
+// Per-theme copy swaps, keyed by the default English text. The meaning always stays.
+const THEME_COPY = {
+  cinema: { "Now estimating": "Now showing", "Reveal cards": "▶ Play reveal", "Save &amp; next ticket": "Next episode »",
+            "Invite": "Share", "Create a new room": "Start a watch party", "Join": "Join", "Participants": "Cast",
+            "History": "Previously on…", "Re-vote": "Rewatch" },
+  samurai: { "Now estimating": "任務 · Current quest", "Reveal cards": "抜刀 · Reveal", "Save &amp; next ticket": "次へ · Next quest",
+             "Invite": "招待 · Invite", "Create a new room": "道場を開く · Open a dojo", "Join": "入門", "Participants": "侍 · Warriors",
+             "History": "巻物 · Scroll", "Re-vote": "再戦 · Again" },
+  mission: { "Now estimating": "Mission objective", "Reveal cards": "Initiate reveal", "Save &amp; next ticket": "Next objective ›",
+             "Invite": "Uplink", "Create a new room": "Launch new mission", "Join": "Dock", "Participants": "Crew",
+             "History": "Mission log", "Re-vote": "Abort & retry" },
+};
+const currentTheme = () => document.documentElement.getAttribute("data-theme") || "";
+function ensureThemeAssets(name) {
+  const t = FUN_THEMES[name]; if (!t) return;
+  if (!document.getElementById("theme-css-" + name)) {
     const l = document.createElement("link");
-    l.id = "retro-css"; l.rel = "stylesheet"; l.href = "/retro2007.css";
+    l.id = "theme-css-" + name; l.rel = "stylesheet"; l.href = `/themes/${name}.css`;
     document.head.appendChild(l);
   }
-  loadFont("https://fonts.googleapis.com/css2?family=Varela+Round&display=swap");
+  loadFont(`https://fonts.googleapis.com/css2?${t.font}&display=swap`);
 }
 function applyTheme() {
-  const t = LS.get("theme", "system");
-  if (t === RETRO) ensureRetroAssets();
+  let t = LS.get("theme", "system");
+  if (!["system", "light", "dark"].includes(t) && !FUN_THEMES[t]) t = "system";
+  ensureThemeAssets(t);
   if (t === "system") document.documentElement.removeAttribute("data-theme");
   else document.documentElement.setAttribute("data-theme", t);
 }
-const isRetro = () => document.documentElement.getAttribute("data-theme") === RETRO;
+const isRetro = () => currentTheme() === RETRO;
 function isDark() {
-  const t = document.documentElement.getAttribute("data-theme");
-  if (t === RETRO) return false;
+  const t = currentTheme();
+  if (FUN_THEMES[t]) return FUN_THEMES[t].dark;
   return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
 }
 function toggleTheme() { LS.set("theme", isDark() ? "light" : "dark"); applyTheme(); render(); }
-function toggleRetro() {
-  const on = !isRetro();
-  LS.set("theme", on ? RETRO : "system");
+function setTheme(name) {
+  LS.set("theme", FUN_THEMES[name] ? name : "system");
   applyTheme(); render();
-  toast(on ? "Chào mừng trở lại năm 2007! Xem tốt nhất ở 1024×768 ;)" : "Welcome back to 2026");
+  if (FUN_THEMES[name]) toast(FUN_THEMES[name].hello);
 }
-// Copy swaps for retro mode: cheerful 9x-era Vietnamese, the real meaning stays.
-const T = (en, vi) => (isRetro() ? vi : en);
+function toggleRetro() { setTheme(isRetro() ? "" : RETRO); if (!isRetro()) toast("Welcome back to 2026"); }
+// T(english, retroVietnamese): retro gets 9x-era Vietnamese, other fun themes use THEME_COPY.
+const T = (en, vi = en) => (isRetro() ? vi : THEME_COPY[currentTheme()]?.[en] ?? en);
 const visits = (() => { const n = LS.get("visits", 0) + 1; LS.set("visits", n); return n; })();
 applyTheme();
 
@@ -307,7 +333,8 @@ function render() {
 
 function themeBtn(size = "") {
   return `<span class="theme-btns"><button class="btn btn-icon ${size}" data-act="theme" aria-label="${isDark() ? "Switch to light mode" : "Switch to dark mode"}">${icon(isDark() ? "sun" : "moon")}</button>`
-    + `<button class="btn btn-retro ${size}" data-act="retro" aria-pressed="${isRetro()}" title="Retro 2007 mode" aria-label="Retro 2007 mode">2007</button></span>`;
+    + `<label class="sr-only" for="theme-pick">Theme</label><select id="theme-pick" class="select theme-pick" data-act="themePick" title="Fun themes">`
+    + `<option value="">Default theme</option>${Object.entries(FUN_THEMES).map(([k, t]) => `<option value="${k}" ${currentTheme() === k ? "selected" : ""}>${t.label}</option>`).join("")}</select></span>`;
 }
 function retroTicker() {
   if (!isRetro()) return "";
@@ -467,7 +494,7 @@ function viewTopic(s) {
   return `
   <section class="card topic">
     <div class="field">
-      <label for="topic">Now estimating</label>
+      <label for="topic">${T("Now estimating")}</label>
       <input id="topic" maxlength="200" placeholder="Type or paste a ticket, e.g. AUTH-1423 · Login flow" value="${esc(s.topic)}" autocomplete="off">
     </div>
     ${s.revealed ? "" : `<button class="btn btn-sm" data-act="skip">Skip ticket</button>`}
@@ -551,7 +578,7 @@ function viewResults(s) {
       <span class="muted" style="font-size:13px">Suggested: ${st.unanimous ? "consensus" : "median"}</span>
     </div>` : "<span></span>"}
     <div class="actions">
-      <button class="btn btn-lg" data-act="reset">Re-vote</button>
+      <button class="btn btn-lg" data-act="reset">${T("Re-vote")}</button>
       <button class="btn btn-primary btn-lg" data-act="next">${T("Save &amp; next ticket", "Lưu &amp; tiếp »")}</button>
     </div>
   </section>`;
@@ -563,7 +590,7 @@ function viewPeople(s) {
   const row = (p, first) => `<li class="${first ? "spec-first" : ""}"><span class="n">${esc(p.name)}${p.id === s.you ? ' <span class="muted">(you)</span>' : ""}${p.id === s.host ? ' <span class="tag host">Host</span>' : ""}</span>${p.spectator ? '<span class="tag">Spectator</span>' : s.revealed ? `<span class="ok">${p.vote == null ? "—" : esc(p.vote)}</span>` : p.voted ? '<span class="ok">Voted</span>' : '<span class="wait">Thinking…</span>'}</li>`;
   return `
   <section class="card box">
-    <div class="box-head"><h2>Participants</h2><span class="muted" style="font-size:13px">${s.participants.length} online</span></div>
+    <div class="box-head"><h2>${T("Participants")}</h2><span class="muted" style="font-size:13px">${s.participants.length} online</span></div>
     <ul class="plist">${vs.map((p) => row(p)).join("")}${sp.map((p, i) => row(p, i === 0 && vs.length)).join("")}</ul>
     <label class="check" style="font-size:13px;min-height:36px;margin-top:4px"><input type="checkbox" data-act="spectator" ${meP?.spectator ? "checked" : ""} style="width:16px;height:16px">Join as spectator (don’t vote)</label>
     ${s.host && s.host === s.you ? `<div class="danger-zone">
@@ -578,7 +605,7 @@ function viewHistory(s) {
   const numericTotal = h.reduce((a, r) => { const n = numeric(r.final ?? ""); return n === null ? a : a + n; }, 0);
   return `
   <section class="card box">
-    <div class="box-head"><h2>History</h2>${h.length ? `<button class="btn-link" data-act="csv">Export CSV</button>` : ""}</div>
+    <div class="box-head"><h2>${T("History")}</h2>${h.length ? `<button class="btn-link" data-act="csv">Export CSV</button>` : ""}</div>
     ${h.length ? `<ul class="hlist">${h.map((r) => `<li><span class="t" title="${esc(r.topic)}">${esc(r.topic)}</span><span class="pts">${esc(r.final ?? "—")}</span></li>`).join("")}</ul>
     <div class="total"><span class="muted">Session total</span><strong>${fmt(numericTotal)} pts · ${h.length} ticket${h.length === 1 ? "" : "s"}</strong></div>`
     : `<p class="muted" style="font-size:14px;margin:10px 0 0">${T("Saved tickets appear here after “Save &amp; next ticket”.", "Chưa có gì ở đây cả :( Hãy là người đầu tiên!")}</p>`}
@@ -699,6 +726,7 @@ document.addEventListener("click", (e) => {
 document.addEventListener("change", (e) => {
   const el = e.target;
   if (el.dataset.act === "deck") send({ t: "deck", deck: el.value });
+  if (el.dataset.act === "themePick") setTheme(el.value);
   if (el.dataset.act === "spectator") { LS.set("spectator", el.checked); send({ t: "spectator", on: el.checked }); }
 });
 let topicTimer;

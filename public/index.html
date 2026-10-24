@@ -24,7 +24,7 @@
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme]) {
     --bg: #1F1E1D; --surface: #262624; --surface-2: #30302E;
     --border: #3D3D3A; --border-strong: #4D4C48; --dash: #73726C;
     --ink: #F0EEE6; --ink-2: #DEDCD1; --muted: #B0AEA5;
@@ -70,6 +70,8 @@ a { color: var(--accent-ink); }
 .btn-lg { height: 52px; font-size: 16px; }
 .btn-icon { width: 40px; padding: 0; }
 .theme-btns { display: inline-flex; gap: 8px; align-items: center; }
+.theme-pick { height: 40px; max-width: 170px; font-size: 13px; }
+.topbar .theme-pick { height: 36px; }
 .btn-retro { width: auto; padding: 0 10px; font-family: var(--mono); font-size: 12px; letter-spacing: .5px; }
 .btn-retro.btn-sm { padding: 0 8px; }
 .btn-danger { color: var(--bad); border-color: var(--bad); background: var(--surface); }

@@ -1,0 +1,106 @@
+/* =====================================================================
+   Estimo — "Samurai" theme: washi paper, sumi ink, vermilion seals.
+   Loaded lazily; every rule is scoped under [data-theme="samurai"].
+   ===================================================================== */
+
+:root[data-theme="samurai"] {
+  --bg: #f3ead8; --surface: #fbf6ea; --surface-2: #ece2cc;
+  --border: #d8c9a8; --border-strong: #b9a67e; --dash: #9b8a66;
+  --ink: #1c1a17; --ink-2: #3a342b; --muted: #5c5444;
+  --accent: #b8281f; --accent-ink: #9e2018; --accent-soft: #f1d9cf; --accent-soft-ink: #7a1810;
+  --btn: #1c1a17; --btn-ink: #fbf6ea; --good: #3f6b2a; --bad: #9e2018;
+  --outlier: #8a6a1f; --outlier-bg: #f6ead0; --outlier-ink: #6b4f12;
+  --track: #dccdab; --bar-2: #c9b48a; --shadow: rgba(60, 40, 10, .12);
+  --serif: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;
+  --sans: "Hiragino Sans", "Noto Sans", system-ui, sans-serif;
+  --s-brush: "Yuji Syuku", "Shippori Mincho", serif;
+  --s-gold: #b8892b;
+  color-scheme: light;
+}
+
+/* washi paper with fibres, and a faint ensō brush circle */
+[data-theme="samurai"] body {
+  background:
+    radial-gradient(circle at 88% 22%, transparent 0 150px, rgba(28, 26, 23, .07) 152px 166px, transparent 168px),
+    radial-gradient(circle at 6% 92%, rgba(184, 40, 31, .045) 0 110px, transparent 112px),
+    repeating-linear-gradient(17deg, rgba(120, 90, 40, .025) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(-23deg, rgba(120, 90, 40, .02) 0 1px, transparent 1px 11px),
+    #f3ead8;
+  background-attachment: fixed;
+}
+
+/* sumi-ink header with a vermilion edge */
+[data-theme="samurai"] .topbar,
+[data-theme="samurai"] .home header { background: #1c1a17; border-bottom: 3px solid var(--accent); color: #fbf6ea; }
+[data-theme="samurai"] .topbar .code { color: #e6dcc6; }
+[data-theme="samurai"] .topbar .live { color: #9fd38a; }
+[data-theme="samurai"] .topbar .sep { background: #4a443a; }
+[data-theme="samurai"] .logo { color: #fbf6ea; }
+[data-theme="samurai"] .logo .back { stroke: #fbf6ea; }
+[data-theme="samurai"] .logo b { font-family: var(--serif); font-weight: 700; letter-spacing: 2px; }
+[data-theme="samurai"] .logo b::after {
+  content: "侍"; display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; margin-left: 10px; border-radius: 4px; vertical-align: 2px;
+  background: var(--accent); color: #fbf6ea; font: 700 15px/1 var(--serif);
+  box-shadow: inset 0 0 0 2px rgba(251, 246, 234, .35); transform: rotate(-4deg);
+}
+[data-theme="samurai"] .topbar .btn,
+[data-theme="samurai"] .home header .btn,
+[data-theme="samurai"] .topbar select.select,
+[data-theme="samurai"] .home header select.select,
+[data-theme="samurai"] .topbar .me { background: #2b2722; border-color: #4a443a; color: #fbf6ea; }
+[data-theme="samurai"] .topbar .btn-accent { background: var(--accent); border-color: var(--accent); }
+
+/* typography */
+[data-theme="samurai"] .hero h1 { font-family: var(--serif); font-weight: 700; letter-spacing: 1px; }
+[data-theme="samurai"] .hero .eyebrow { color: var(--accent-ink); letter-spacing: 4px; }
+[data-theme="samurai"] .hero .eyebrow::before { content: "見積 · "; }
+[data-theme="samurai"] .box h2 { font-family: var(--serif); font-weight: 700; }
+[data-theme="samurai"] .box .box-head { border-bottom: 2px solid var(--accent); padding-bottom: 8px; }
+[data-theme="samurai"] .topic input { font-family: var(--serif); font-weight: 700; }
+
+/* buttons: ink and seal */
+[data-theme="samurai"] .btn { border-radius: 3px; }
+[data-theme="samurai"] .btn-lg { letter-spacing: 1px; }
+[data-theme="samurai"] .btn-accent { background: var(--accent); border-color: var(--accent); color: #fbf6ea; }
+[data-theme="samurai"] .chip { border-radius: 3px; }
+[data-theme="samurai"] .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fbf6ea; }
+[data-theme="samurai"] .card { border-radius: 4px; box-shadow: 0 1px 0 rgba(255, 255, 255, .6) inset, 0 2px 8px var(--shadow); }
+
+/* the table is a tatami mat with a dark cloth border */
+[data-theme="samurai"] .table {
+  border-radius: 4px; border: 8px solid #2f3a2b; box-shadow: inset 0 0 0 1px #c9b48a;
+  background: repeating-linear-gradient(90deg, rgba(90, 110, 50, .07) 0 2px, transparent 2px 6px), #e3d7b4;
+}
+/* face-down cards: ink with a red sun seal */
+[data-theme="samurai"] .pcard { border-radius: 3px; font-family: var(--s-brush); font-weight: 400; font-size: 34px; }
+[data-theme="samurai"] .pcard.down {
+  background: radial-gradient(circle, var(--accent) 0 10px, transparent 11px), #1c1a17;
+  border: 3px solid #fbf6ea; box-shadow: 0 0 0 1px #1c1a17, 0 4px 10px rgba(0, 0, 0, .25);
+}
+[data-theme="samurai"] .pcard.up { background: linear-gradient(180deg, #f2e2bd, #e2c995); border: 1px solid #a8895a; color: #1c1a17; }
+[data-theme="samurai"] .pcard.up.outlier { background: #f6ead0; border: 2px dashed var(--s-gold); }
+
+/* voting cards are wooden ema tablets; the chosen one becomes a hanko seal */
+[data-theme="samurai"] .vcard {
+  font-family: var(--s-brush); font-weight: 400; font-size: 30px; border-radius: 3px; color: #1c1a17;
+  border: 1px solid #a8895a; background: linear-gradient(180deg, #ecd8ae, #d9bf8c);
+  clip-path: polygon(50% 0, 100% 12%, 100% 100%, 0 100%, 0 12%);
+}
+[data-theme="samurai"] .vcard.meta { background: linear-gradient(180deg, #e8e0cc, #d6caae); color: #5c5444; }
+[data-theme="samurai"] .vcard[aria-pressed="true"] {
+  clip-path: none; border-radius: 8px; transform: translateY(-12px) rotate(-4deg);
+  background: var(--accent); color: #fbf6ea; border: 2px solid #7a1810;
+  box-shadow: inset 0 0 0 3px rgba(251, 246, 234, .35), 0 8px 18px rgba(122, 24, 16, .35);
+}
+
+[data-theme="samurai"] .kpi b { font-family: var(--s-brush); font-weight: 400; }
+[data-theme="samurai"] .progress { height: 6px; background: var(--track); }
+[data-theme="samurai"] .progress div { background: linear-gradient(90deg, #1c1a17, #3a342b 85%, transparent); }
+[data-theme="samurai"] .dist .bar div { background: #c9b48a; }
+[data-theme="samurai"] .dist .bar div.top { background: #1c1a17; }
+[data-theme="samurai"] .final .opt { font-family: var(--s-brush); border-radius: 3px; }
+[data-theme="samurai"] .final .opt[aria-pressed="true"] { background: var(--accent); color: #fbf6ea; border-color: #7a1810; }
+[data-theme="samurai"] .pts { font-family: var(--s-brush); font-weight: 400; background: transparent; border: 1px solid var(--accent); color: var(--accent-ink); }
+[data-theme="samurai"] .fan div { font-family: var(--s-brush); border-radius: 3px; background: linear-gradient(180deg, #ecd8ae, #d9bf8c); border-color: #a8895a; }
+[data-theme="samurai"] .fan div:nth-child(2) { background: var(--accent); color: #fbf6ea; border-color: #7a1810; }
