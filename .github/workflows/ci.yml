@@ -47,6 +47,9 @@ jobs:
         if: steps.secrets.outputs.ready == 'true'
         uses: cloudflare/wrangler-action@v3
         with:
+          # wrangler-action defaults to wrangler 3, which ignores public/_headers
+          # and run_worker_first arrays (needs >= 4.20) — pin the major version.
+          wranglerVersion: "4"
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - name: Skip deploy
