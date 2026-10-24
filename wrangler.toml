@@ -1,0 +1,20 @@
+name = "estimo"
+main = "src/worker.js"
+compatibility_date = "2025-09-01"
+
+# Static UI (public/) is served from Cloudflare's edge cache.
+# Only /ws/* hits the Worker, which routes to one Durable Object per room.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/ws/*", "/api/*"]
+
+[[durable_objects.bindings]]
+name = "ROOM"
+class_name = "Room"
+
+# SQLite-backed class: required on the Workers Free plan
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]

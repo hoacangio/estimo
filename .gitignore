@@ -1,0 +1,6 @@
+node_modules/
+.wrangler/
+.dev.vars
+scripts/.worker.local.mjs
+*.log
+.DS_Store

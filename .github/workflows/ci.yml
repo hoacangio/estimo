@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax check
+        run: |
+          node --check src/worker.js
+          node --check src/decks.js
+          node --check scripts/local-server.mjs
+          sed -n '/<script>/,/<\/script>/p' public/index.html | sed '1d;$d' > /tmp/client.js
+          node --check /tmp/client.js
+      - name: Smoke test (offline server)
+        run: |
+          node scripts/local-server.mjs 8787 &
+          for i in $(seq 1 20); do curl -fs http://localhost:8787/api/health && break; sleep 0.5; done
+          curl -fs http://localhost:8787/r/calm-otter-42 | grep -q "<title>Estimo"
+          curl -fs http://localhost:8787/qr.js | grep -q "EstimoQR"
+
+  deploy:
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Cloudflare secrets
+        id: secrets
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: echo "ready=$([ -n "$TOKEN" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - name: Deploy to Cloudflare Workers
+        if: steps.secrets.outputs.ready == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Skip deploy
+        if: steps.secrets.outputs.ready != 'true'
+        run: echo "::notice::Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets to enable auto-deploy."
