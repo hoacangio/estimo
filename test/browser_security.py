@@ -29,8 +29,9 @@ with sync_playwright() as p:
 
     # attacker sets malicious nickname + topic + votes
     atk_ctx = b.new_context(); atk = atk_ctx.new_page()
-    atk.goto(f"{BASE}/r/{room}")
-    atk.fill("#gnick", PAYLOADS[0][:24]); atk.click("text=Join room"); atk.wait_for_selector(".table")
+    atk.goto(BASE)  # attacker creates the room (and becomes host) with a malicious nickname
+    atk.fill("#nick", PAYLOADS[0][:24]); atk.click("#create-form button[type=submit]"); atk.wait_for_selector(".table")
+    room = atk.url.rsplit("/", 1)[1]
 
     vic_ctx = b.new_context(accept_downloads=True); vic = vic_ctx.new_page()
     vic.goto(f"{BASE}/r/{room}")

@@ -23,7 +23,7 @@ print("Page weight (own origin):", ", ".join(f"{k} {v['gzip']/1024:.1f} KB gz" f
 def crowd(room, n):
     js = f"""
 const ws=[];for(let i=0;i<{n};i++){{const w=new WebSocket('{BASE.replace('http','ws')}/ws/{room}');
-w.onopen=()=>w.send(JSON.stringify({{t:'join',id:crypto.randomUUID(),name:'bot'+i}}));ws.push(w);}}
+w.onopen=()=>w.send(JSON.stringify({{t:'join',id:crypto.randomUUID(),name:'bot'+i,create:true}}));ws.push(w);}}
 setTimeout(()=>ws.forEach((w,i)=>i%2&&w.send(JSON.stringify({{t:'vote',v:'5'}}))),1500);
 setTimeout(()=>process.exit(0),60000);"""
     return subprocess.Popen(["node", "-e", js])
@@ -44,6 +44,7 @@ with sync_playwright() as p:
     for n in (10, 50, 99):
         room = f"perf-client-{n}-{int(time.time())}"
         bots = crowd(room, n)
+        time.sleep(1.5)  # bots create the room first
         pg2 = b.new_context().new_page()
         pg2.add_init_script("""
           window.__renders = [];

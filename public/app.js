@@ -57,16 +57,39 @@ const me = {
   set name(v) { LS.set("name", v); },
 };
 
+/* ---------------- themes: system | light | dark | retro2007 ---------------- */
+const RETRO = "retro2007";
+function ensureRetroAssets() {
+  // Lazy: users who never turn on retro mode download 0 bytes of it.
+  if (!document.getElementById("retro-css")) {
+    const l = document.createElement("link");
+    l.id = "retro-css"; l.rel = "stylesheet"; l.href = "/retro2007.css";
+    document.head.appendChild(l);
+  }
+  loadFont("https://fonts.googleapis.com/css2?family=Varela+Round&display=swap");
+}
 function applyTheme() {
   const t = LS.get("theme", "system");
+  if (t === RETRO) ensureRetroAssets();
   if (t === "system") document.documentElement.removeAttribute("data-theme");
   else document.documentElement.setAttribute("data-theme", t);
 }
+const isRetro = () => document.documentElement.getAttribute("data-theme") === RETRO;
 function isDark() {
   const t = document.documentElement.getAttribute("data-theme");
+  if (t === RETRO) return false;
   return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
 }
 function toggleTheme() { LS.set("theme", isDark() ? "light" : "dark"); applyTheme(); render(); }
+function toggleRetro() {
+  const on = !isRetro();
+  LS.set("theme", on ? RETRO : "system");
+  applyTheme(); render();
+  toast(on ? "Chào mừng trở lại năm 2007! Xem tốt nhất ở 1024×768 ;)" : "Welcome back to 2026");
+}
+// Copy swaps for retro mode: cheerful 9x-era Vietnamese, the real meaning stays.
+const T = (en, vi) => (isRetro() ? vi : en);
+const visits = (() => { const n = LS.get("visits", 0) + 1; LS.set("visits", n); return n; })();
 applyTheme();
 
 /* ---------------- room codes ---------------- */
@@ -102,7 +125,8 @@ function parseRoute() {
 function go(path) { history.pushState(null, "", path); onRoute(); }
 function onRoute() {
   parseRoute();
-  if (ui.route === "room" && validCode(ui.room) && me.name) connect();
+  if (ui.route !== "room" || ui.roomError?.room !== ui.room) ui.roomError = null;
+  if (ui.route === "room" && validCode(ui.room) && me.name && !ui.roomError) connect();
   else disconnect();
   render();
 }
@@ -122,8 +146,7 @@ function connect() {
   sock.onopen = () => {
     retry = 0;
     ui.connected = true; ui.everConnected = true;
-    send({ t: "join", id: me.id, name: me.name, spectator: LS.get("spectator", false) });
-    remember(wsRoom);
+    send({ t: "join", id: me.id, name: me.name, spectator: LS.get("spectator", false), create: ui.pendingCreate === wsRoom });
     clearInterval(pingTimer);
     pingTimer = setInterval(() => { if (sock.readyState === 1) { pingSent = performance.now(); sock.send("ping"); } }, 15000);
     pingSent = performance.now(); sock.send("ping");
@@ -133,9 +156,12 @@ function connect() {
     if (e.data === "pong") { ui.rtt = Math.round(performance.now() - pingSent); updateLive(); return; }
     let msg; try { msg = JSON.parse(e.data); } catch { return; }
     if (msg.t === "state") onState(msg);
+    else if (msg.t === "error") onServerError(msg);
+    else if (msg.t === "deleted") onRoomDeleted(msg);
   };
-  sock.onclose = () => {
+  sock.onclose = (e) => {
     if (sock !== ws) return;
+    if (e.code >= 4000 && e.code < 4100) { ws = null; ui.connected = false; clearInterval(pingTimer); render(); return; } // final: no retry
     ui.connected = false; clearInterval(pingTimer);
     const delay = Math.min(8000, 500 * 2 ** retry++);
     retryTimer = setTimeout(() => { if (ui.route === "room" && wsRoom === ui.room) connect(); }, delay);
@@ -148,6 +174,25 @@ function disconnect() {
   wsRoom = null; ui.state = null; ui.connected = false; ui.showInvite = false; ui.final = null;
 }
 function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
+
+function forget(code) { LS.set("recentRooms", LS.get("recentRooms", []).filter((r) => r.code !== code)); }
+function onServerError(msg) {
+  if (msg.code === "not_found") {
+    ui.roomError = { room: ui.room, code: "not_found" }; forget(ui.room); disconnect(); render();
+  } else if (msg.code === "room_limit") {
+    ui.pendingCreate = null;
+    ui.limitInfo = { max: msg.max, rooms: Array.isArray(msg.rooms) ? msg.rooms : [] };
+    disconnect(); go("/");
+  } else if (msg.code === "forbidden") {
+    toast("Only the host can do that.");
+  }
+}
+function onRoomDeleted(msg) {
+  const code = ui.room;
+  forget(code); disconnect();
+  ui.roomError = { room: code, code: msg.reason === "expired" ? "expired" : "deleted" };
+  render();
+}
 
 /* Optimistic voting: the card flips instantly, the message is sent in parallel,
    and the next server snapshot is the source of truth. */
@@ -181,6 +226,7 @@ function onState(s) {
     else applyOptimisticVote(s, pv.v);
   }
   ui.state = s;
+  if (ui.pendingCreate === ui.room) { ui.pendingCreate = null; ui.limitInfo = null; }
   // Brand-new room created from Home: apply the chosen deck once.
   if (ui.pendingDeck) {
     const fresh = !s.history.length && s.participants.length <= 1;
@@ -189,15 +235,15 @@ function onState(s) {
   }
   if (!s.revealed) ui.final = null;
   else if (!prev || !prev.revealed) ui.final = suggestFinal(s);
-  remember(ui.room, s.deck);
+  remember(ui.room, s.deck, s.host && s.host === s.you);
   render();
 }
 
-function remember(code, deck) {
+function remember(code, deck, host) {
   if (!code) return;
   const list = LS.get("recentRooms", []).filter((r) => r.code !== code);
   const old = LS.get("recentRooms", []).find((r) => r.code === code);
-  list.unshift({ code, deck: deck || old?.deck || "", at: Date.now() });
+  list.unshift({ code, deck: deck || old?.deck || "", host: host ?? old?.host ?? false, at: Date.now() });
   LS.set("recentRooms", list.slice(0, 5));
 }
 
@@ -251,6 +297,7 @@ function render() {
   const keep = active && active.id ? { id: active.id, start: active.selectionStart, end: active.selectionEnd, value: active.value } : null;
   if (ui.route === "home") app.innerHTML = viewHome();
   else if (!validCode(ui.room)) app.innerHTML = viewBadRoom();
+  else if (ui.roomError) app.innerHTML = viewRoomError();
   else if (!me.name) app.innerHTML = viewGate();
   else app.innerHTML = viewRoom();
   if (ui.showInvite) drawQR();
@@ -259,7 +306,21 @@ function render() {
 }
 
 function themeBtn(size = "") {
-  return `<button class="btn btn-icon ${size}" data-act="theme" aria-label="${isDark() ? "Switch to light mode" : "Switch to dark mode"}">${icon(isDark() ? "sun" : "moon")}</button>`;
+  return `<span class="theme-btns"><button class="btn btn-icon ${size}" data-act="theme" aria-label="${isDark() ? "Switch to light mode" : "Switch to dark mode"}">${icon(isDark() ? "sun" : "moon")}</button>`
+    + `<button class="btn btn-retro ${size}" data-act="retro" aria-pressed="${isRetro()}" title="Retro 2007 mode" aria-label="Retro 2007 mode">2007</button></span>`;
+}
+function retroTicker() {
+  if (!isRetro()) return "";
+  return `<div class="r-ticker" aria-hidden="true"><span>★ Mới! Estimo giờ đã có QR code — quét là vào! ★ Hỗ trợ thang 1–10, Fibonacci, T-shirt ★ Không cần đăng ký, không spam ★ Web 2.0 ready ★ Gõ ↑↑↓↓←→←→BA để quay về 2026 ★</span></div>`;
+}
+function retroFooter() {
+  const digits = String(128734 + visits).padStart(7, "0").split("").map((d) => `<b>${d}</b>`).join("");
+  const badge = (l, v, c) => `<span class="r-badge"><i>${l}</i><em style="background:${c}">${v}</em></span>`;
+  return `<footer class="r-footer" aria-hidden="true">
+    <div>Bạn là người truy cập thứ</div><div class="r-counter">${digits}</div>
+    <div class="r-badges">${badge("W3C", "XHTML 1.0", "#1f5aa6")}${badge("CSS", "valid!", "#3f7a14")}${badge("RSS", "2.0 feed", "#b34d00")}${badge("Web", "2.0 ready", "#c2105e")}${badge("get", "Firefox 2", "#a8410b")}</div>
+    <div>Xem tốt nhất với Firefox 2 hoặc IE7, độ phân giải 1024×768 · © 2007 Estimo Inc.</div>
+  </footer>`;
 }
 
 function viewHome() {
@@ -271,13 +332,14 @@ function viewHome() {
       <a class="logo" href="/" data-nav="/">${LOGO}<b>Estimo</b></a>
       ${themeBtn()}
     </header>
+    ${retroTicker()}
     <main>
       <div class="wrap">
         <section class="hero">
-          <p class="eyebrow">Planning poker · no sign-up</p>
-          <h1>Estimate together, in seconds.</h1>
+          <p class="eyebrow">${T("Planning poker · no sign-up", "Web 2.0 · Không cần đăng ký!")}</p>
+          <h1>${T("Estimate together, in seconds.", "Ước lượng cùng nhau, nhanh như chớp!")}</h1>
           <p>Create a room, share the link or QR code, vote in real time. Fibonacci, T-shirt, powers of 2 — or a simple 1 to 10 scale.</p>
-          <div class="fan" aria-hidden="true"><div>3</div><div>5</div><div>8</div></div>
+          <div class="fan" aria-hidden="true"><div>3</div><div>5</div><div>8</div>${isRetro() ? '<span class="starburst">100% miễn phí!</span>' : ""}</div>
         </section>
         <section class="panel card">
           <form id="create-form">
@@ -291,24 +353,26 @@ function viewHome() {
               </div>
               <div class="hint mono">${esc(deck[2])}</div>
             </div>
-            <button class="btn btn-primary btn-lg" style="width:100%;margin-top:28px" type="submit">Create a new room</button>
+            <button class="btn btn-primary btn-lg" style="width:100%;margin-top:28px" type="submit">${T("Create a new room", "Tạo phòng ngay »")}</button>
           </form>
           <div class="divider">or join an existing one</div>
           <form id="join-form" class="join-row">
             <label class="sr-only" for="code">Room code</label>
             <input class="input" id="code" value="${esc(ui.draftCode ?? "")}" placeholder="e.g. calm-otter-42" autocapitalize="off" autocomplete="off" spellcheck="false">
-            <button class="btn" type="submit" style="height:48px;border-color:var(--ink)">Join</button>
+            <button class="btn" type="submit" style="height:48px;border-color:var(--ink)">${T("Join", "Vào!")}</button>
           </form>
+          ${ui.limitInfo ? `<div class="notice" role="alert"><strong>You’ve reached the limit of ${ui.limitInfo.max} rooms.</strong> Delete one of your rooms to create a new one:
+            <div class="notice-rooms">${ui.limitInfo.rooms.map((c) => `<a class="mono" href="/r/${esc(c)}" data-nav="/r/${esc(c)}">${esc(c)}</a>`).join("")}</div></div>` : ""}
           ${ui.joinError ? `<div class="hint" style="color:var(--bad)">${esc(ui.joinError)}</div>` : `<div class="hint">${icon("qr")}On your phone? Scan the room’s QR code with the camera.</div>`}
           ${recent.length ? `
           <div class="recent">
             <h2>Recent rooms</h2>
-            ${recent.map((r) => `<a href="/r/${esc(r.code)}" data-nav="/r/${esc(r.code)}"><span class="mono">${esc(r.code)}</span><span class="muted" style="font-size:13px">${esc(ago(r.at))}${r.deck ? " · " + esc(deckLabel(r.deck)) : ""}</span></a>`).join("")}
+            ${recent.map((r) => `<a href="/r/${esc(r.code)}" data-nav="/r/${esc(r.code)}"><span class="mono">${esc(r.code)}${r.host ? ' <span class="tag">Host</span>' : ""}</span><span class="muted" style="font-size:13px">${esc(ago(r.at))}${r.deck ? " · " + esc(deckLabel(r.deck)) : ""}</span></a>`).join("")}
           </div>` : ""}
         </section>
       </div>
     </main>
-    <footer><span>Internal tool · Rooms are cleared after 30 days without activity</span><span>v1.0</span></footer>
+    ${isRetro() ? retroFooter() : `<footer><span>Internal tool · Rooms are cleared after 30 days without activity</span><span>v1.0</span></footer>`}
   </div>`;
 }
 function deckLabel(k) { return (HOME_DECKS.find((d) => d[0] === k) || [k, k])[1]; }
@@ -317,6 +381,21 @@ function ago(t) {
   if (d <= 0) return "Today"; if (d === 1) return "Yesterday";
   if (d < 7) return new Date(t).toLocaleDateString(undefined, { weekday: "short" });
   return new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}
+
+function viewRoomError() {
+  const e = ui.roomError;
+  const title = { not_found: T("This room doesn’t exist.", "Oops! Phòng này không tồn tại :("),
+                  deleted: T("The host deleted this room.", "Chủ phòng đã xoá phòng này rồi :("),
+                  expired: T("This room expired after 30 days without activity.", "Phòng đã hết hạn sau 30 ngày không ai ghé :(") }[e.code];
+  const hint = e.code === "not_found"
+    ? "Check the code, or ask the host for a new link. Rooms are created from the home page."
+    : "Thanks for estimating! Create a new room to keep going.";
+  return `<div class="gate"><div class="inner"><a class="logo" href="/" data-nav="/">${LOGO}<b>Estimo</b></a>
+    <p class="mono muted" style="margin:56px 0 0">${esc(e.room)}</p>
+    <h1 style="font-family:var(--serif);font-weight:500;margin:8px 0 12px">${title}</h1>
+    <p class="muted" style="margin:0 0 28px">${hint}</p>
+    <a class="btn btn-primary btn-lg" href="/" data-nav="/">Go to home</a></div></div>`;
 }
 
 function viewBadRoom() {
@@ -357,17 +436,17 @@ function viewRoom() {
       <span id="live" class="live ${ui.connected ? "" : "off"}">${liveText()}</span>
     </div>
     <div class="right">
-      <button class="btn btn-accent btn-sm" data-act="invite">${icon("qr")}Invite</button>
+      <button class="btn btn-accent btn-sm" data-act="invite">${icon("qr")}${T("Invite", "Mời bạn bè!")}</button>
       ${s ? `<label class="sr-only" for="deck">Voting scale</label>
       <select class="select hide-sm" id="deck" data-act="deck">${Object.entries(s.decks).map(([k, d]) => `<option value="${k}" ${k === s.deck ? "selected" : ""}>${esc(d.label)}</option>`).join("")}</select>` : ""}
       ${themeBtn("btn-sm")}
       <button class="me" data-act="rename" aria-label="Change nickname"><span class="avatar">${esc(initial(me.name))}</span><span class="hide-sm">${esc(me.name)}</span>${icon("pen")}</button>
     </div>
-  </header>`;
+  </header>${retroTicker()}`;
   if (!s) {
-    return top + `<div class="layout"><div class="main"><div class="table"><p class="muted">${ui.everConnected ? "Reconnecting…" : "Connecting to the room…"}</p></div></div></div>` + (ui.showInvite ? viewInvite() : "");
+    return top + `<div class="layout"><div class="main"><div class="table"><p class="muted">${ui.everConnected ? T("Reconnecting…", "Oops! Mất kết nối rồi. Đang thử lại…") : T("Connecting to the room…", "Đang tải… (bằng AJAX!)")}</p></div></div></div>` + (ui.showInvite ? viewInvite() : "");
   }
-  return top + (ui.connected ? "" : `<div class="banner">Connection lost — reconnecting. Your vote is kept.</div>`) + `
+  return top + (ui.connected ? "" : `<div class="banner">${T("Connection lost — reconnecting. Your vote is kept.", "Oops! Mất kết nối rồi. Đang thử lại… phiếu của bạn vẫn còn đó ^^ (lâu quá thì F5 nhé)")}</div>`) + `
   <div class="layout">
     <div class="main">
       ${viewTopic(s)}
@@ -378,7 +457,7 @@ function viewRoom() {
       ${viewPeople(s)}
       ${viewHistory(s)}
     </aside>
-  </div>` + (ui.showInvite ? viewInvite() : "");
+  </div>` + (isRetro() ? retroFooter() : "") + (ui.showInvite ? viewInvite() : "");
 }
 const initial = (n) => (n || "?").trim().charAt(0).toUpperCase();
 function liveText() { return ui.connected ? `Live${ui.rtt != null ? " · " + ui.rtt + " ms" : ""}` : "Offline"; }
@@ -415,7 +494,7 @@ function viewTable(s) {
   }).join("");
 
   let status;
-  if (!vs.length) status = `<p class="muted">Nobody is voting yet. Invite your team with the link or QR code.</p>`;
+  if (!vs.length) status = `<p class="muted">${T("Nobody is voting yet. Invite your team with the link or QR code.", "Chưa có ai cả :( Hãy là người đầu tiên — mời đồng đội vào nhé!")}</p>`;
   else if (!s.revealed) {
     const waiting = vs.filter((p) => !p.voted).map((p) => p.name);
     const pct = Math.round((voted / vs.length) * 100);
@@ -424,7 +503,7 @@ function viewTable(s) {
         <span style="color:var(--ink-2)"><strong style="color:var(--ink)">${voted} of ${vs.length}</strong> ${voted === 1 ? "has" : "have"} voted${waiting.length && waiting.length <= 3 ? ` · waiting for ${esc(waiting.join(", "))}` : ""}</span>
         <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="${vs.length}" aria-valuenow="${voted}"><div style="width:${pct}%"></div></div>
         <div class="actions">
-          <button class="btn btn-primary btn-lg" data-act="reveal" ${voted ? "" : "disabled"}>Reveal cards</button>
+          <button class="btn btn-primary btn-lg" data-act="reveal" ${voted ? "" : "disabled"}>${T("Reveal cards", "Lật bài!")}</button>
           <button class="btn btn-lg" data-act="reset" ${voted ? "" : "disabled"}>Reset</button>
         </div>
       </div>`;
@@ -473,7 +552,7 @@ function viewResults(s) {
     </div>` : "<span></span>"}
     <div class="actions">
       <button class="btn btn-lg" data-act="reset">Re-vote</button>
-      <button class="btn btn-primary btn-lg" data-act="next">Save &amp; next ticket</button>
+      <button class="btn btn-primary btn-lg" data-act="next">${T("Save &amp; next ticket", "Lưu &amp; tiếp »")}</button>
     </div>
   </section>`;
 }
@@ -481,12 +560,16 @@ function viewResults(s) {
 function viewPeople(s) {
   const vs = voters(s), sp = s.participants.filter((p) => p.spectator);
   const meP = s.participants.find((p) => p.id === s.you);
-  const row = (p, first) => `<li class="${first ? "spec-first" : ""}"><span class="n">${esc(p.name)}${p.id === s.you ? ' <span class="muted">(you)</span>' : ""}</span>${p.spectator ? '<span class="tag">Spectator</span>' : s.revealed ? `<span class="ok">${p.vote == null ? "—" : esc(p.vote)}</span>` : p.voted ? '<span class="ok">Voted</span>' : '<span class="wait">Thinking…</span>'}</li>`;
+  const row = (p, first) => `<li class="${first ? "spec-first" : ""}"><span class="n">${esc(p.name)}${p.id === s.you ? ' <span class="muted">(you)</span>' : ""}${p.id === s.host ? ' <span class="tag host">Host</span>' : ""}</span>${p.spectator ? '<span class="tag">Spectator</span>' : s.revealed ? `<span class="ok">${p.vote == null ? "—" : esc(p.vote)}</span>` : p.voted ? '<span class="ok">Voted</span>' : '<span class="wait">Thinking…</span>'}</li>`;
   return `
   <section class="card box">
     <div class="box-head"><h2>Participants</h2><span class="muted" style="font-size:13px">${s.participants.length} online</span></div>
     <ul class="plist">${vs.map((p) => row(p)).join("")}${sp.map((p, i) => row(p, i === 0 && vs.length)).join("")}</ul>
     <label class="check" style="font-size:13px;min-height:36px;margin-top:4px"><input type="checkbox" data-act="spectator" ${meP?.spectator ? "checked" : ""} style="width:16px;height:16px">Join as spectator (don’t vote)</label>
+    ${s.host && s.host === s.you ? `<div class="danger-zone">
+      <button class="btn btn-sm btn-danger" data-act="deleteRoom">${ui.confirmDelete && Date.now() - ui.confirmDelete < 4000 ? "Click again to delete for everyone" : "Delete room"}</button>
+      <span class="muted">Only you (the host) can do this. You can host up to ${s.maxRooms} rooms.</span>
+    </div>` : ""}
   </section>`;
 }
 
@@ -498,7 +581,7 @@ function viewHistory(s) {
     <div class="box-head"><h2>History</h2>${h.length ? `<button class="btn-link" data-act="csv">Export CSV</button>` : ""}</div>
     ${h.length ? `<ul class="hlist">${h.map((r) => `<li><span class="t" title="${esc(r.topic)}">${esc(r.topic)}</span><span class="pts">${esc(r.final ?? "—")}</span></li>`).join("")}</ul>
     <div class="total"><span class="muted">Session total</span><strong>${fmt(numericTotal)} pts · ${h.length} ticket${h.length === 1 ? "" : "s"}</strong></div>`
-    : `<p class="muted" style="font-size:14px;margin:10px 0 0">Saved tickets appear here after “Save &amp; next ticket”.</p>`}
+    : `<p class="muted" style="font-size:14px;margin:10px 0 0">${T("Saved tickets appear here after “Save &amp; next ticket”.", "Chưa có gì ở đây cả :( Hãy là người đầu tiên!")}</p>`}
   </section>`;
 }
 
@@ -569,8 +652,17 @@ let toastTimer;
 function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.remove("hidden"); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add("hidden"), 2000); }
 
 /* ---------------- events ---------------- */
+const KONAMI = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
+let konami = 0, logoClicks = [];
 document.addEventListener("click", (e) => {
   const nav = e.target.closest("[data-nav]");
+  if (nav && nav.classList.contains("logo") && ui.route === "home") {
+    // Easter egg: click the logo 7 times on the home page
+    e.preventDefault();
+    const t = Date.now(); logoClicks = logoClicks.filter((x) => t - x < 4000); logoClicks.push(t);
+    if (logoClicks.length >= 7) { logoClicks = []; toggleRetro(); }
+    return;
+  }
   if (nav && !e.metaKey && !e.ctrlKey) { e.preventDefault(); ui.joinError = ""; go(nav.getAttribute("data-nav")); return; }
   const el = e.target.closest("[data-act]");
   if (!el) return;
@@ -578,6 +670,7 @@ document.addEventListener("click", (e) => {
   const act = el.dataset.act;
   switch (act) {
     case "theme": toggleTheme(); break;
+    case "retro": toggleRetro(); break;
     case "homeDeck": ui.homeDeck = el.dataset.deck; LS.set("lastDeck", ui.homeDeck); render(); break;
     case "vote": vote(el.dataset.v); break;
     case "reveal": send({ t: "reveal" }); break;
@@ -591,6 +684,11 @@ document.addEventListener("click", (e) => {
     case "png": downloadPng(); break;
     case "copy": copy(roomUrl()); break;
     case "csv": exportCsv(); break;
+    case "deleteRoom":
+      // Two-step confirm without a blocking browser dialog
+      if (ui.confirmDelete && Date.now() - ui.confirmDelete < 4000) { ui.confirmDelete = null; send({ t: "deleteRoom" }); }
+      else { ui.confirmDelete = Date.now(); render(); setTimeout(() => { if (ui.confirmDelete && Date.now() - ui.confirmDelete >= 4000) { ui.confirmDelete = null; render(); } }, 4100); }
+      break;
     case "rename": {
       const n = (prompt("Your nickname", me.name) || "").trim().slice(0, 24);
       if (n && n !== me.name) { me.name = n; send({ t: "rename", name: n }); render(); }
@@ -614,7 +712,8 @@ document.addEventListener("submit", (e) => {
   const f = e.target;
   if (f.id === "create-form") {
     const n = $("#nick").value.trim().slice(0, 24); if (!n) return;
-    me.name = n; ui.pendingDeck = ui.homeDeck; go(`/r/${newRoomCode()}`);
+    const code = newRoomCode();
+    me.name = n; ui.pendingDeck = ui.homeDeck; ui.pendingCreate = code; ui.limitInfo = null; go(`/r/${code}`);
   } else if (f.id === "join-form") {
     const code = normalizeCode($("#code").value);
     const n = $("#nick").value.trim().slice(0, 24);
@@ -630,6 +729,9 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && ui.showInvite) { ui.showInvite = false; ui.fullInvite = false; render(); return; }
   const tag = (e.target.tagName || "").toLowerCase();
   if (tag === "input" || tag === "select" || tag === "textarea" || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  konami = k === KONAMI[konami] ? konami + 1 : k === KONAMI[0] ? 1 : 0;
+  if (konami === KONAMI.length) { konami = 0; toggleRetro(); return; }
   const s = ui.state; if (!s || s.revealed || ui.showInvite) return;
   if (/^[0-9]$/.test(e.key)) {
     const cards = s.decks[s.deck].cards;

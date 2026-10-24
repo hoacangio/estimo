@@ -15,7 +15,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const room = (tag) => `sec-${tag}-${crypto.randomBytes(3).toString("hex")}`;
 
 /* ---------- tiny client ---------- */
-function client(roomId, name, { id = crypto.randomUUID(), spectator = false, join = true } = {}) {
+function client(roomId, name, { id = crypto.randomUUID(), spectator = false, join = true, create = true } = {}) {
   const ws = new WebSocket(`${WS_BASE}/ws/${roomId}`);
   const c = { ws, id, name, states: [], raw: [], closed: null, last: null };
   ws.onmessage = (e) => {
@@ -25,7 +25,7 @@ function client(roomId, name, { id = crypto.randomUUID(), spectator = false, joi
   };
   ws.onclose = (e) => { c.closed = { code: e.code, reason: e.reason }; };
   c.ready = new Promise((res, rej) => {
-    ws.onopen = () => { if (join) ws.send(JSON.stringify({ t: "join", id, name, spectator })); res(); };
+    ws.onopen = () => { if (join) ws.send(JSON.stringify({ t: "join", id, name, spectator, create })); res(); };
     ws.onerror = () => rej(new Error("ws error"));
   });
   c.send = (o) => ws.send(typeof o === "string" ? o : JSON.stringify(o));
@@ -209,6 +209,39 @@ await test("S14", "Security headers are set on the app shell", async () => {
   assert(/script-src 'self'(?![^;]*unsafe-inline)/.test(csp), "CSP missing or allows inline scripts");
   assert(headers["x-content-type-options"] === "nosniff", "missing X-Content-Type-Options: nosniff");
   assert(/strict-origin|no-referrer/.test(headers["referrer-policy"] || ""), "missing Referrer-Policy");
+});
+
+/* 5. Room ownership */
+await test("S15", "Rooms are not created implicitly by visiting a URL", async () => {
+  const r = room("ghost"); const a = client(r, "Alice", { create: false }); await a.ready; await a.settle(500);
+  assert(a.raw.some((m) => m.includes('"not_found"')), "joining an unknown room without create did not fail");
+  assert(a.closed?.code === 4004, `expected close 4004, got ${JSON.stringify(a.closed)}`);
+});
+
+await test("S16", "Only the host can delete a room; everyone is notified", async () => {
+  const r = room("del"); const host = client(r, "Host"); await host.ready; await host.settle();
+  const guest = client(r, "Guest", { create: false }); await guest.ready; await guest.settle();
+  assert(guest.last.host === host.last.you && guest.last.host !== guest.last.you, "host id not reported correctly");
+  guest.send({ t: "deleteRoom" }); await guest.settle();
+  assert(!guest.closed && !host.closed, "a guest was able to delete the room");
+  assert(guest.raw.some((m) => m.includes('"forbidden"')), "guest did not get a forbidden error");
+  host.send({ t: "deleteRoom" }); await host.settle(500);
+  assert(guest.raw.some((m) => m.includes('"t":"deleted"')) && guest.closed?.code === 4000, "guest was not notified of deletion");
+  const again = client(r, "Late", { create: false }); await again.ready; await again.settle(400);
+  assert(again.closed?.code === 4004, "deleted room still accepts joins");
+});
+
+await test("S17", "Each host can own at most MAX_ROOMS_PER_HOST rooms (default 5)", async () => {
+  const hostId = crypto.randomUUID(); const made = [];
+  for (let i = 0; i < 5; i++) { const c = client(room("lim" + i), "Host", { id: hostId }); await c.ready; await c.settle(250); made.push(c); }
+  assert(made.every((c) => !c.closed && c.last?.host === c.last?.you), "first five rooms should be created");
+  const sixth = client(room("lim6"), "Host", { id: hostId }); await sixth.ready; await sixth.settle(400);
+  const err = sixth.raw.map((m) => { try { return JSON.parse(m); } catch { return {}; } }).find((m) => m.code === "room_limit");
+  assert(err && err.max === 5 && err.rooms.length === 5 && sixth.closed?.code === 4003, "sixth room was not refused with the room list");
+  made[0].send({ t: "deleteRoom" }); await made[0].settle(400);
+  const retry = client(room("lim7"), "Host", { id: hostId }); await retry.ready; await retry.settle(400);
+  assert(!retry.closed && retry.last?.host === retry.last?.you, "deleting a room did not free a slot");
+  [...made, retry].forEach((c) => c.close());
 });
 
 const failed = results.filter((r) => !r.ok);

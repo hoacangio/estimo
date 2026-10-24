@@ -69,6 +69,18 @@ a { color: var(--accent-ink); }
 .btn-sm { height: 36px; padding: 0 12px; border-radius: 8px; font-size: 14px; }
 .btn-lg { height: 52px; font-size: 16px; }
 .btn-icon { width: 40px; padding: 0; }
+.theme-btns { display: inline-flex; gap: 8px; align-items: center; }
+.btn-retro { width: auto; padding: 0 10px; font-family: var(--mono); font-size: 12px; letter-spacing: .5px; }
+.btn-retro.btn-sm { padding: 0 8px; }
+.btn-danger { color: var(--bad); border-color: var(--bad); background: var(--surface); }
+.btn-danger:hover:not(:disabled) { background: var(--bad); color: #fff; border-color: var(--bad); }
+.danger-zone { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--surface-2); font-size: 12px; }
+.danger-zone .btn { align-self: flex-start; }
+.tag { font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 1px 7px; font-family: var(--sans); font-weight: 500; }
+.tag.host { color: var(--accent-ink); border-color: var(--accent); }
+.notice { margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-soft-ink); font-size: 14px; }
+.notice-rooms { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.notice-rooms a { font-size: 13px; }
 .btn-link { border: none; background: none; color: var(--accent-ink); padding: 4px 0; font-size: 14px; }
 .input { height: 48px; width: 100%; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface); padding: 0 14px; font-size: 16px; }
 .input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }

@@ -24,7 +24,7 @@ const src = (await fs.readFile(path.join(ROOT, "src/worker.js"), "utf8"))
   .replace(/from\s*["']\.\/decks\.js["']/, `from ${JSON.stringify(url.pathToFileURL(path.join(ROOT, "src/decks.js")).href)}`);
 const tmp = path.join(ROOT, "scripts", ".worker.local.mjs");
 await fs.writeFile(tmp, src);
-const { Room, isAllowedOrigin, MAX_CONNECTIONS } = await import(url.pathToFileURL(tmp).href + `?t=${Date.now()}`);
+const { Room, HostRegistry, isAllowedOrigin, MAX_CONNECTIONS } = await import(url.pathToFileURL(tmp).href + `?t=${Date.now()}`);
 await fs.unlink(tmp).catch(() => {});
 
 /* ---------- Durable Object runtime emulation ---------- */
@@ -46,6 +46,20 @@ function makeCtx(roomId) {
     },
   };
 }
+// Env mirrors wrangler.toml: [vars] + the HOSTS namespace (RPC calls are direct method calls here)
+const VARS = { MAX_ROOMS_PER_HOST: process.env.MAX_ROOMS_PER_HOST || "5" };
+const registries = new Map();
+const env = {
+  ...VARS,
+  HOSTS: {
+    idFromName: (name) => name,
+    get(name) {
+      if (!registries.has(name)) registries.set(name, new HostRegistry(makeCtx("host:" + name), env));
+      return registries.get(name);
+    },
+  },
+};
+
 // roomId -> Promise<{ room, ctx }>. The promise is stored synchronously so that
 // concurrent connections always share ONE instance, like idFromName() on Cloudflare.
 const rooms = new Map();
@@ -53,7 +67,8 @@ function getRoom(id) {
   if (!rooms.has(id)) {
     rooms.set(id, (async () => {
       const ctx = makeCtx(id);
-      const room = new Room(ctx, { ROOM_ID: id });
+      const room = new Room(ctx, env);
+      room.code = id; // the Worker passes this as the X-Estimo-Room header
       await new Promise((r) => setTimeout(r, 0)); // let blockConcurrencyWhile finish
       return { room, ctx };
     })());

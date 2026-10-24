@@ -8,6 +8,7 @@ const MAX_HISTORY = 30;
 const MAX_MESSAGE_CHARS = 2000;
 const ROOM_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 export const MAX_CONNECTIONS = 100;           // sockets per room
+const DEFAULT_MAX_ROOMS_PER_HOST = 5;          // override with the MAX_ROOMS_PER_HOST var
 const RATE = { burst: 20, perSecond: 5, dropLimit: 40 }; // per-socket token bucket
 const EMOTES = ["👍", "🎉", "🤔", "🔥"];
 
@@ -24,10 +25,12 @@ export function isAllowedOrigin(origin, host) {
   try { return new URL(origin).host === host; } catch { return false; }
 }
 
-async function publicId(secret, salt) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${salt}:${secret}`));
-  return [...new Uint8Array(buf)].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("");
+async function sha256Hex(text, bytes = 32) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].slice(0, bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
+const publicId = (secret, salt) => sha256Hex(`${salt}:${secret}`, 8); // per-room, safe to broadcast
+const hostKey = (secret) => sha256Hex(`host:${secret}`);               // global, never broadcast
 
 /* ------------------------------------------------------------------ *
  * Edge entry: static assets are served by Cloudflare before this runs.
@@ -46,7 +49,9 @@ export default {
       if (!isAllowedOrigin(req.headers.get("Origin"), url.host))
         return new Response("Forbidden origin", { status: 403 });
       const stub = env.ROOM.get(env.ROOM.idFromName(room));
-      return stub.fetch(req);
+      const fwd = new Request(req);
+      fwd.headers.set("X-Estimo-Room", room);
+      return stub.fetch(fwd);
     }
 
     if (url.pathname === "/api/health") return Response.json({ ok: true });
@@ -69,18 +74,24 @@ export class Room extends DurableObject {
     this.s = null;
     this.buckets = new WeakMap(); // ws -> rate-limit bucket (in-memory, reset on hibernation)
     ctx.blockConcurrencyWhile(async () => {
-      this.s = (await ctx.storage.get("s")) ?? Room.empty();
-      if (!hasDeck(this.s.deck)) this.s.deck = DEFAULT_DECK; // repair rooms saved by older versions
+      const saved = await ctx.storage.get("s");
+      this.s = saved ?? Room.empty();
+      if (saved && saved.exists === undefined) this.s.exists = true; // rooms from before hosts existed
+      if (!hasDeck(this.s.deck)) this.s.deck = DEFAULT_DECK;         // repair rooms saved by older versions
     });
     // Heartbeats answered without waking the object
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
   }
 
   static empty() {
-    return { topic: "", deck: DEFAULT_DECK, revealed: false, votes: {}, history: [] };
+    return { exists: false, code: null, host: null, topic: "", deck: DEFAULT_DECK, revealed: false, votes: {}, history: [] };
   }
 
-  async fetch() {
+  get maxRooms() { return Number(this.env?.MAX_ROOMS_PER_HOST) || DEFAULT_MAX_ROOMS_PER_HOST; }
+  #registry(key) { return this.env.HOSTS.get(this.env.HOSTS.idFromName(key)); }
+
+  async fetch(req) {
+    this.code ??= req?.headers?.get("X-Estimo-Room") || null;
     if (this.ctx.getWebSockets().length >= MAX_CONNECTIONS)
       return new Response("Room is full", { status: 429 });
     const { 0: client, 1: server } = new WebSocketPair();
@@ -120,9 +131,20 @@ export class Room extends DurableObject {
         const name = clean(msg.name, 24);
         if (!id || !name) return;
         const pid = await publicId(id, this.ctx.id.toString());
+        // Rooms must be created explicitly; a random URL does not create one.
+        if (!s.exists) {
+          if (msg.create !== true) return this.#reject(ws, { code: "not_found" }, 4004);
+          const created = await this.#create(id, pid);
+          if (!created.ok) return this.#reject(ws, { code: "room_limit", max: this.maxRooms, rooms: created.rooms }, 4003);
+        }
         ws.serializeAttachment({ id, pid, name, spectator: msg.spectator === true });
         persist = false;
         break;
+      }
+      case "deleteRoom": {
+        if (!s.host || me.pid !== s.host.pid) return this.#send({ t: "error", code: "forbidden" }, null, ws);
+        await this.#destroy("deleted");
+        return;
       }
       case "rename": {
         const name = clean(msg.name, 24);
@@ -202,8 +224,42 @@ export class Room extends DurableObject {
       await this.ctx.storage.setAlarm(Date.now() + ROOM_TTL_MS);
       return;
     }
+    await this.#destroy("expired");
+  }
+
+  /* ---------------- room lifecycle ---------------- */
+
+  // Reserve a slot in the host's registry, then mark the room as created.
+  // Concurrent creates for the same room are serialised through one promise.
+  async #create(secretId, pid) {
+    if (this.creating) await this.creating;
+    if (this.s.exists) return { ok: true };
+    this.creating = (async () => {
+      const key = await hostKey(secretId);
+      const code = this.code || "unknown";
+      const res = await this.#registry(key).reserve(code, this.maxRooms);
+      if (!res.ok) return res;
+      Object.assign(this.s, { exists: true, code, host: { pid, key }, createdAt: Date.now() });
+      await this.ctx.storage.put("s", this.s);
+      await this.ctx.storage.setAlarm(Date.now() + ROOM_TTL_MS);
+      return res;
+    })();
+    try { return await this.creating; } finally { this.creating = null; }
+  }
+
+  // Delete everything and free the host's slot; connected clients are told why.
+  async #destroy(reason) {
+    const { host, code } = this.s;
+    for (const w of this.ctx.getWebSockets()) {
+      try { w.send(JSON.stringify({ t: "deleted", reason })); w.close(4000, `Room ${reason}`); } catch {}
+    }
+    if (host?.key && code) { try { await this.#registry(host.key).release(code); } catch {} }
     await this.ctx.storage.deleteAll();
     this.s = Room.empty();
+  }
+
+  #reject(ws, payload, closeCode) {
+    try { ws.send(JSON.stringify({ t: "error", ...payload })); ws.close(closeCode, payload.code); } catch {}
   }
 
   async webSocketClose(ws, code) {
@@ -237,9 +293,9 @@ export class Room extends DurableObject {
     return m;
   }
 
-  #send(payload, exclude) {
+  #send(payload, exclude, only) {
     const data = JSON.stringify(payload);
-    for (const w of this.#sockets(exclude)) {
+    for (const w of only ? [only] : this.#sockets(exclude)) {
       try { w.send(data); } catch {}
     }
   }
@@ -265,7 +321,7 @@ export class Room extends DurableObject {
     // Shared part is serialised once; per-socket fields are appended as strings.
     // `decks` and `history` are only sent to sockets that have not synced yet,
     // or when they changed — a vote broadcast stays ~1 KB instead of ~10 KB.
-    const shared = JSON.stringify({ t: "state", topic: s.topic, deck: s.deck, revealed: s.revealed, participants }).slice(0, -1);
+    const shared = JSON.stringify({ t: "state", topic: s.topic, deck: s.deck, revealed: s.revealed, host: s.host?.pid ?? null, maxRooms: this.maxRooms, participants }).slice(0, -1);
     let historyJson = null, decksJson = null;
     for (const w of live) {
       const a = w.deserializeAttachment();
@@ -280,4 +336,30 @@ export class Room extends DurableObject {
       try { w.send(msg + "}"); } catch {}
     }
   }
+}
+
+/* ------------------------------------------------------------------ *
+ * One instance per host (keyed by a hash of the host's secret client id).
+ * Tracks which rooms the host owns, so the per-host room limit holds across
+ * every Room object. Called from Room via Durable Object RPC.
+ * ------------------------------------------------------------------ */
+export class HostRegistry extends DurableObject {
+  async #rooms() { return (await this.ctx.storage.get("rooms")) ?? []; }
+
+  async reserve(code, max) {
+    const rooms = await this.#rooms();
+    if (rooms.includes(code)) return { ok: true, rooms };
+    if (rooms.length >= max) return { ok: false, rooms };
+    rooms.push(code);
+    await this.ctx.storage.put("rooms", rooms);
+    return { ok: true, rooms };
+  }
+
+  async release(code) {
+    const rooms = (await this.#rooms()).filter((c) => c !== code);
+    await this.ctx.storage.put("rooms", rooms);
+    return rooms;
+  }
+
+  async list() { return this.#rooms(); }
 }

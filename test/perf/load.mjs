@@ -25,7 +25,7 @@ function user(room, name) {
     u.last = { ...u.last, ...m };
     for (const w of u.waiters.splice(0)) w(u.last);
   };
-  u.ready = new Promise((res, rej) => { ws.onopen = () => { ws.send(JSON.stringify({ t: "join", id: crypto.randomUUID(), name })); res(); }; ws.onerror = rej; });
+  u.ready = new Promise((res, rej) => { ws.onopen = () => { ws.send(JSON.stringify({ t: "join", id: crypto.randomUUID(), name, create: true })); res(); }; ws.onerror = rej; });
   u.next = (pred = () => true) => new Promise((res) => { const f = (m) => (pred(m) ? res(m) : u.waiters.push(f)); u.waiters.push(f); });
   u.send = (o) => ws.send(JSON.stringify(o));
   return u;
