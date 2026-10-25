@@ -342,8 +342,8 @@ const app = $("#app");
 // then shorten the install tip, until nothing scrolls.
 function fitHome() {
   if (!matchMedia("(max-width: 640px)").matches) return;
-  const over = () => document.scrollingElement.scrollHeight > innerHeight + 1;
-  for (let per = 2; over() && per >= 1; per--) { ui.recentPer = per; app.innerHTML = viewHome(); }
+  const over = () => document.scrollingElement.scrollHeight > innerHeight;
+  for (let per = 4; over() && per >= 1; per--) { ui.recentPer = per; app.innerHTML = viewHome(); }
   if (over()) app.querySelector(".home")?.classList.add("tight");
 }
 let fitTimer;
@@ -396,7 +396,7 @@ function retroFooter() {
 
 function viewHome() {
   const recent = LS.get("recentRooms", []);
-  const RECENT_PAGE = ui.recentPer || 3; // fitHome() lowers this on short phones
+  const RECENT_PAGE = ui.recentPer || 5; // fitHome() lowers this on short phones
   const pages = Math.max(1, Math.ceil(recent.length / RECENT_PAGE));
   const page = ui.recentPage = Math.min(Math.max(0, ui.recentPage || 0), pages - 1);
   const deck = HOME_DECKS.find((d) => d[0] === ui.homeDeck) || HOME_DECKS[2];
