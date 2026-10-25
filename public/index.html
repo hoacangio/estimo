@@ -265,8 +265,25 @@ kbd { font-family: var(--mono); font-size: 12px; border: 1px solid var(--border-
   .hand .cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; gap: 8px; }
   .vcard, .vcard.wide { width: auto; height: 64px; }
   .vcard[aria-pressed="true"] { transform: none; }
+  :root:not([data-theme="retro2007"]) .vcard[aria-pressed="true"]:active:not(:disabled) { transform: scale(.95); }
   .hand .tip { display: none; }
 }
+/* App-like press feedback. Applies to the default, Cinema, Samurai and Mission Control
+   themes; Retro 2007 keeps its own glossy press. Quick press-in, springy release. */
+button, a, select, label, input { -webkit-tap-highlight-color: transparent; }
+button, .btn, .chip, .vcard, .opt { touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+:root:not([data-theme="retro2007"]) :is(.btn, .chip, .final .opt, .me, .vcard) {
+  transition: transform .18s cubic-bezier(.3, 1.5, .5, 1), filter .15s ease, background-color .15s ease, box-shadow .15s ease;
+}
+:root:not([data-theme="retro2007"]) :is(.btn, .chip, .final .opt, .me):active:not(:disabled) {
+  transform: scale(.95); filter: brightness(.92); transition-duration: .06s;
+}
+:root:not([data-theme="retro2007"]) .vcard:active:not(:disabled) { transform: translateY(2px) scale(.93); transition-duration: .06s; }
+:root:not([data-theme="retro2007"]) .vcard[aria-pressed="true"]:active:not(:disabled) { transform: translateY(-10px) scale(.95); }
+:root:not([data-theme="retro2007"]) .vcard.pop { animation: card-pop .32s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes card-pop { from { transform: translateY(2px) scale(.9); } }
+:root:not([data-theme="retro2007"]) :is(.recent a, .notice-rooms a):active { opacity: .6; }
+
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>

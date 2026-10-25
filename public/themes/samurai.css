@@ -104,3 +104,6 @@
 [data-theme="samurai"] .pts { font-family: var(--s-brush); font-weight: 400; background: transparent; border: 1px solid var(--accent); color: var(--accent-ink); }
 [data-theme="samurai"] .fan div { font-family: var(--s-brush); border-radius: 3px; background: linear-gradient(180deg, #ecd8ae, #d9bf8c); border-color: #a8895a; }
 [data-theme="samurai"] .fan div:nth-child(2) { background: var(--accent); color: #fbf6ea; border-color: #7a1810; }
+
+/* press feedback: the chosen seal keeps its tilt while being pressed */
+:root[data-theme="samurai"] .vcard[aria-pressed="true"]:active:not(:disabled) { transform: translateY(-10px) rotate(-4deg) scale(.95); }

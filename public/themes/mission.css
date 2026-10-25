@@ -132,3 +132,6 @@
 [data-theme="mission"] .fan div:nth-child(2) { background: var(--accent); color: var(--btn-ink); }
 [data-theme="mission"] .dialog { border-radius: 2px; border: 1px solid var(--accent); background: #0b1220; }
 [data-theme="mission"] .toast { background: #0b1220; color: var(--accent-ink); border: 1px solid var(--accent); font-family: var(--sans); text-transform: uppercase; letter-spacing: 1px; }
+
+/* press feedback: consoles light up instead of darkening */
+:root[data-theme="mission"] :is(.btn, .chip, .final .opt, .me, .vcard):active:not(:disabled) { filter: brightness(1.35); }

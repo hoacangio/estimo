@@ -102,3 +102,7 @@
 [data-theme="cinema"] .fan div:nth-child(2) { background: #e50914; }
 [data-theme="cinema"] .dialog { background: #181818; }
 [data-theme="cinema"] .qr { border-color: #333; }
+
+/* press feedback: tiles push in from their hover zoom */
+:root[data-theme="cinema"] .vcard:active:not(:disabled) { transform: scale(1.02); filter: brightness(.9); }
+:root[data-theme="cinema"] .vcard[aria-pressed="true"]:active:not(:disabled) { transform: translateY(-10px) scale(.98); }

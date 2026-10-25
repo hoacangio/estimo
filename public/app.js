@@ -232,6 +232,8 @@ function vote(card) {
   if (!s || s.revealed || !ws || ws.readyState !== 1) return;
   const next = s.mine === card ? null : card; // clicking your card again withdraws it
   ui.pendingVote = { v: next, deck: s.deck, at: performance.now() };
+  ui.pop = { v: next, at: performance.now() };
+  if (next !== null && navigator.vibrate && matchMedia("(pointer: coarse)").matches) { try { navigator.vibrate(8); } catch {} }
   applyOptimisticVote(s, next);
   render();                       // instant feedback
   send({ t: "vote", v: card });   // server round trip runs in the background
@@ -260,7 +262,7 @@ function onState(s) {
     ui.pendingDeck = null;
   }
   if (!s.revealed) ui.final = null;
-  else if (!prev || !prev.revealed) { ui.final = suggestFinal(s); ui.flipUntil = performance.now() + 450; }
+  else if (!prev || !prev.revealed) { ui.final = suggestFinal(s); ui.flipAt = performance.now(); }
   remember(ui.room, s.deck, s.host && s.host === s.you);
   render();
 }
@@ -331,6 +333,7 @@ function render() {
   else if (!me.name) app.innerHTML = viewGate();
   else app.innerHTML = viewRoom();
   if (ui.showInvite) drawQR();
+
   if (keep) { const el = document.getElementById(keep.id); if (el) { if (el.tagName === "INPUT" && !el.readOnly && keep.value != null) el.value = keep.value; el.focus(); try { if (keep.start != null) el.setSelectionRange(keep.start, keep.end); } catch {} } }
   document.title = ui.route === "room" ? `${ui.room} · Estimo` : "Estimo — planning poker";
 }
@@ -505,6 +508,14 @@ function viewTopic(s) {
   </section>`;
 }
 
+// One-shot animations (card pop, reveal flip) must survive re-renders: an element rendered
+// mid-animation starts with a negative delay equal to the time already elapsed, so it picks
+// up where the replaced element left off instead of restarting or being cut short.
+function oneShot(at, ms, cls) {
+  const age = at == null ? Infinity : performance.now() - at;
+  return age < ms ? { cls: " " + cls, style: ` style="animation-delay:-${Math.round(age)}ms"` } : { cls: "", style: "" };
+}
+
 function voters(s) { return s.participants.filter((p) => !p.spectator); }
 
 function viewTable(s) {
@@ -517,11 +528,11 @@ function viewTable(s) {
       if (p.vote == null) { cls = "pcard up none"; face = "–"; }
       else {
         const isOut = st && st.outliers.has(p.vote) && !st.unanimous;
-        cls = `pcard up${isOut ? " outlier" : META.has(p.vote) ? " off" : ""}${performance.now() < (ui.flipUntil || 0) ? " flip" : ""}`;
+        cls = `pcard up${isOut ? " outlier" : META.has(p.vote) ? " off" : ""}${oneShot(ui.flipAt, 350, "flip").cls}`;
         face = p.vote === "☕" ? icon("cup") : esc(p.vote);
       }
     } else if (p.voted) cls = "pcard down";
-    return `<div class="seat ${p.id === s.you ? "mine" : ""}"><div class="${cls}" ${s.revealed ? "" : `aria-label="${p.voted ? "voted" : "not voted yet"}"`}>${face}</div><span class="name" title="${esc(p.name)}">${esc(p.name)}${p.id === s.you ? ' <span class="muted" style="font-weight:400">(you)</span>' : ""}</span></div>`;
+    return `<div class="seat ${p.id === s.you ? "mine" : ""}"><div class="${cls}"${cls.includes(" flip") ? oneShot(ui.flipAt, 350, "flip").style : ""} ${s.revealed ? "" : `aria-label="${p.voted ? "voted" : "not voted yet"}"`}>${face}</div><span class="name" title="${esc(p.name)}">${esc(p.name)}${p.id === s.you ? ' <span class="muted" style="font-weight:400">(you)</span>' : ""}</span></div>`;
   }).join("");
 
   let status;
@@ -554,7 +565,7 @@ function viewHand(s) {
   <section class="hand" aria-label="Your card">
     <span class="tip muted" style="font-size:13px">Shortcut: keys <kbd>1</kbd>–<kbd>0</kbd></span>
     <div class="cards">
-      ${cards.map((c) => `<button class="vcard${META.has(c) ? " meta" : ""}${c.length > 2 ? " wide" : ""}" data-act="vote" data-v="${esc(c)}" aria-pressed="${s.mine === c}" aria-label="${c === "☕" ? "Need a break" : c === "?" ? "Not sure" : "Vote " + esc(c)}">${c === "☕" ? icon("cup") : esc(c)}</button>`).join("")}
+      ${cards.map((c) => `<button class="vcard${META.has(c) ? " meta" : ""}${c.length > 2 ? " wide" : ""}${ui.pop?.v === c ? oneShot(ui.pop.at, 320, "pop").cls : ""}"${ui.pop?.v === c ? oneShot(ui.pop.at, 320, "pop").style : ""} data-act="vote" data-v="${esc(c)}" aria-pressed="${s.mine === c}" aria-label="${c === "☕" ? "Need a break" : c === "?" ? "Not sure" : "Vote " + esc(c)}">${c === "☕" ? icon("cup") : esc(c)}</button>`).join("")}
     </div>
   </section>`;
 }
@@ -781,6 +792,8 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => re
 // Back online: reconnect now instead of waiting for the next backoff step
 window.addEventListener("online", () => { if (ui.route === "room" && me.name && !ui.roomError && (!ws || ws.readyState > 1)) { retry = 0; connect(); } });
 window.addEventListener("offline", () => render());
+// iOS Safari only applies :active styles when a touch listener exists
+document.addEventListener("touchstart", () => {}, { passive: true });
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && ui.route === "room" && me.name && (!ws || ws.readyState > 1)) { retry = 0; connect(); } });
 
 /* ---------------- PWA: offline shell + install ---------------- */
