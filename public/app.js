@@ -90,6 +90,7 @@ function ensureThemeAssets(name) {
   if (!document.getElementById("theme-css-" + name)) {
     const l = document.createElement("link");
     l.id = "theme-css-" + name; l.rel = "stylesheet"; l.href = `/themes/${name}.css`;
+    l.onload = () => refitHome(); // theme metrics change the home layout
     document.head.appendChild(l);
   }
   loadFont(`https://fonts.googleapis.com/css2?${t.font}&display=swap`);
@@ -337,6 +338,18 @@ const fmt = (n) => (n == null ? "—" : Number.isInteger(n) ? String(n) : n.toFi
 
 /* ---------------- render ---------------- */
 const app = $("#app");
+// Phones: keep the home screen to one screen. Show fewer recent rooms per page first,
+// then shorten the install tip, until nothing scrolls.
+function fitHome() {
+  if (!matchMedia("(max-width: 640px)").matches) return;
+  const over = () => document.scrollingElement.scrollHeight > innerHeight + 1;
+  for (let per = 2; over() && per >= 1; per--) { ui.recentPer = per; app.innerHTML = viewHome(); }
+  if (over()) app.querySelector(".home")?.classList.add("tight");
+}
+let fitTimer;
+function refitHome() { if (ui.route !== "home") return; clearTimeout(fitTimer); fitTimer = setTimeout(render, 120); }
+addEventListener("resize", refitHome);
+document.fonts?.addEventListener?.("loadingdone", refitHome);
 function render() {
   const active = document.activeElement;
   const keep = active && active.id ? { id: active.id, start: active.selectionStart, end: active.selectionEnd, value: active.value } : null;
@@ -348,7 +361,7 @@ function render() {
   // re-rendered bar continues from there instead of jumping.
   const oldBar = app.querySelector(".progress [data-to]");
   ui.lastPct = oldBar ? (oldBar.getBoundingClientRect().width / oldBar.parentElement.getBoundingClientRect().width) * 100 : undefined;
-  if (ui.route === "home") app.innerHTML = viewHome();
+  if (ui.route === "home") { ui.recentPer = null; app.innerHTML = viewHome(); fitHome(); }
   else if (!validCode(ui.room)) app.innerHTML = viewBadRoom();
   else if (ui.roomError) app.innerHTML = viewRoomError();
   else if (!me.name) app.innerHTML = viewGate();
@@ -383,6 +396,9 @@ function retroFooter() {
 
 function viewHome() {
   const recent = LS.get("recentRooms", []);
+  const RECENT_PAGE = ui.recentPer || 3; // fitHome() lowers this on short phones
+  const pages = Math.max(1, Math.ceil(recent.length / RECENT_PAGE));
+  const page = ui.recentPage = Math.min(Math.max(0, ui.recentPage || 0), pages - 1);
   const deck = HOME_DECKS.find((d) => d[0] === ui.homeDeck) || HOME_DECKS[2];
   return `
   <div class="home">
@@ -403,15 +419,15 @@ function viewHome() {
           <form id="create-form">
             <label class="label" for="nick">Your nickname</label>
             <input class="input" id="nick" maxlength="24" autocomplete="nickname" value="${esc(ui.draftNick ?? me.name)}" placeholder="e.g. Hòa" required>
-            ${me.name ? `<div class="hint">${icon("check")}Saved on this device</div>` : `<div class="hint">Saved on this device</div>`}
-            <div style="margin-top:24px">
+            ${me.name ? `<div class="hint saved-hint">${icon("check")}Saved on this device</div>` : `<div class="hint saved-hint">Saved on this device</div>`}
+            <div class="deck-field">
               <span class="label">Voting scale</span>
               <div class="decks" role="group" aria-label="Voting scale">
                 ${HOME_DECKS.map(([k, l]) => `<button type="button" class="chip" data-act="homeDeck" data-deck="${k}" aria-pressed="${k === ui.homeDeck}">${l}</button>`).join("")}
               </div>
-              <div class="hint mono">${esc(deck[2])}</div>
+              <div class="hint mono deck-hint">${esc(deck[2])}</div>
             </div>
-            <button class="btn btn-primary btn-lg" style="width:100%;margin-top:28px" type="submit">${T("Create a new room", "Tạo phòng ngay »")}</button>
+            <button class="btn btn-primary btn-lg create-btn" type="submit">${T("Create a new room", "Tạo phòng ngay »")}</button>
           </form>
           <div class="divider">or join an existing one</div>
           <form id="join-form" class="join-row">
@@ -425,8 +441,11 @@ function viewHome() {
           ${viewInstall()}
           ${recent.length ? `
           <div class="recent">
-            <h2>Recent rooms</h2>
-            ${recent.map((r) => `<a href="/r/${esc(r.code)}" data-nav="/r/${esc(r.code)}"><span class="mono">${esc(r.code)}${r.host ? ' <span class="tag">Host</span>' : ""}</span><span class="muted" style="font-size:13px">${esc(ago(r.at))}${r.deck ? " · " + esc(deckLabel(r.deck)) : ""}</span></a>`).join("")}
+            <div class="recent-head"><h2>Recent rooms</h2>${pages > 1 ? `<div class="pager" role="group" aria-label="Recent rooms pages">
+              <button type="button" class="btn btn-icon btn-sm" data-act="recentPage" data-dir="-1" aria-label="Previous page" ${page === 0 ? "disabled" : ""}>‹</button>
+              <span class="muted">${page + 1}/${pages}</span>
+              <button type="button" class="btn btn-icon btn-sm" data-act="recentPage" data-dir="1" aria-label="Next page" ${page === pages - 1 ? "disabled" : ""}>›</button></div>` : ""}</div>
+            ${recent.slice(page * RECENT_PAGE, page * RECENT_PAGE + RECENT_PAGE).map((r) => `<a href="/r/${esc(r.code)}" data-nav="/r/${esc(r.code)}"><span class="mono">${esc(r.code)}${r.host ? ' <span class="tag">Host</span>' : ""}</span><span class="muted" style="font-size:13px">${esc(ago(r.at))}${r.deck ? " · " + esc(deckLabel(r.deck)) : ""}</span></a>`).join("")}
           </div>` : ""}
         </section>
       </div>
@@ -783,6 +802,7 @@ document.addEventListener("click", (e) => {
     case "skip": send({ t: "next", topic: "" }); break;
     case "next": send({ t: "next", topic: "", final: ui.final }); break;
     case "final": ui.final = el.dataset.v; render(); break;
+    case "recentPage": ui.recentPage = (ui.recentPage || 0) + Number(el.dataset.dir); render(); break;
     case "toggleDrawer": ui.drawerOpen && !ui.drawerLeaveAt ? closeDrawer() : openDrawer(); break;
     case "closeDrawer": closeDrawer(); break;
     case "invite": ui.showInvite = true; ui.fullInvite = false; ui.inviteAt = performance.now(); render(); break;

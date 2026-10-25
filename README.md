@@ -14,6 +14,7 @@ Runs entirely on **Cloudflare Workers + Durable Objects** and fits comfortably i
 - Spectator mode for PO / Scrum Master
 - Nickname and a stable client id saved in `localStorage`, so a reload or reconnect keeps your vote
 - Keyboard shortcuts `1`–`0`, dark mode
+- **One-screen home on phones:** just the form, join box and recent rooms (paged, rows adapt to the screen height)
 - **One-screen room:** topic, table and your cards always fit the viewport without scrolling; participants, history and settings live in a sidebar (a slide-in drawer on phones and tablets)
 - **Hosts:** whoever creates a room is its host; only the host can delete it (everyone in the room is notified)
 - **Room limit per host:** 5 by default — change `MAX_ROOMS_PER_HOST` in `wrangler.toml` and redeploy

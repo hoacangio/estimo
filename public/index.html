@@ -136,6 +136,40 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
 .recent h2 { margin: 0; font-size: 13px; font-weight: 600; color: var(--muted); }
 .recent a { display: flex; justify-content: space-between; padding: 12px 0; text-decoration: none; color: var(--ink); border-bottom: 1px solid var(--surface-2); }
 .recent a:last-child { border-bottom: none; }
+.deck-field { margin-top: 24px; }
+.create-btn { width: 100%; margin-top: 28px; }
+.recent-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px; }
+.pager { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.pager .btn { width: 32px; height: 32px; font-size: 18px; line-height: 1; }
+/* Phones: the home screen fits one screen — the form, join and recent rooms only */
+@media (max-width: 640px) {
+  .home { min-height: 100vh; min-height: 100dvh; }
+  .home > header { padding: 8px 14px; }
+  .home > header .btn-icon { width: 36px; height: 36px; }
+  .home > header .theme-pick { height: 36px; }
+  .home main { flex: 1; padding: 4px 12px calc(10px + env(safe-area-inset-bottom)); align-items: flex-start; }
+  .home .wrap { gap: 0; }
+  .home .hero, :root .home > footer, :root .home .r-footer { display: none !important; }
+  .panel { flex-basis: auto; padding: 16px; border-radius: 16px; }
+  .panel .label { margin-bottom: 6px; }
+  .panel .input { height: 44px; }
+  .saved-hint, .deck-hint { display: none; }
+  .deck-field { margin-top: 12px; }
+  .decks { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px; scroll-padding: 16px; }
+  .decks::-webkit-scrollbar { display: none; }
+  .decks .chip { flex: none; height: 36px; padding: 0 12px; }
+  .create-btn { margin-top: 14px; height: 48px; }
+  .divider { margin: 10px 0; }
+  .join-row .btn { height: 44px !important; }
+  .install { margin-top: 10px; padding: 8px 10px; gap: 8px; font-size: 12px; line-height: 1.35; }
+  .install img { width: 24px; height: 24px; border-radius: 6px; }
+  .install strong { font-size: 13px; }
+  .recent { margin-top: 10px; padding-top: 6px; }
+  .recent a { padding: 8px 0; }
+  .home.tight .install img { display: none; }
+  .home.tight .divider { margin: 6px 0; }
+  .home.tight .create-btn { margin-top: 10px; }
+}
 .home footer { padding: 20px 32px; font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 
 /* ---------- join gate ---------- */
