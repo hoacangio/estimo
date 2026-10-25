@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Estimo — planning poker",
   "short_name": "Estimo",
-  "description": "Realtime planning poker for agile teams. No sign-up.",
+  "description": "Real-time planning poker for agile teams.",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",

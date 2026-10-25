@@ -112,7 +112,7 @@ function setTheme(name) {
   applyTheme(); render();
   if (FUN_THEMES[name]) toast(FUN_THEMES[name].hello);
 }
-function toggleRetro() { setTheme(isRetro() ? "" : RETRO); if (!isRetro()) toast("Welcome back to 2026"); }
+function toggleRetro() { setTheme(isRetro() ? "" : RETRO); }
 // T(english, retroVietnamese): retro gets 9x-era Vietnamese, other fun themes use THEME_COPY.
 const T = (en, vi = en) => (isRetro() ? vi : THEME_COPY[currentTheme()]?.[en] ?? en);
 const visits = (() => { const n = LS.get("visits", 0) + 1; LS.set("visits", n); return n; })();
@@ -367,16 +367,16 @@ function viewHome() {
     <main>
       <div class="wrap">
         <section class="hero">
-          <p class="eyebrow">${T("Planning poker · no sign-up", "Web 2.0 · Không cần đăng ký!")}</p>
-          <h1>${T("Estimate together, in seconds.", "Ước lượng cùng nhau, nhanh như chớp!")}</h1>
-          <p>Create a room, share the link or QR code, vote in real time. Fibonacci, T-shirt, powers of 2 — or a simple 1 to 10 scale.</p>
+          <p class="eyebrow">${T("Planning poker", "Web 2.0 · Không cần đăng ký!")}</p>
+          <h1>${T("Estimate together, in real time.", "Ước lượng cùng nhau, nhanh như chớp!")}</h1>
+          <p>Create a room, invite your team with a link or QR code, and vote together. Supports Fibonacci, modified Fibonacci, T-shirt sizes, powers of 2 and a 1–10 scale.</p>
           <div class="fan" aria-hidden="true"><div>3</div><div>5</div><div>8</div>${isRetro() ? '<span class="starburst">100% miễn phí!</span>' : ""}</div>
         </section>
         <section class="panel card">
           <form id="create-form">
             <label class="label" for="nick">Your nickname</label>
             <input class="input" id="nick" maxlength="24" autocomplete="nickname" value="${esc(ui.draftNick ?? me.name)}" placeholder="e.g. Hòa" required>
-            ${me.name ? `<div class="hint">${icon("check")}Remembered on this device</div>` : `<div class="hint">Saved on this device so you only type it once.</div>`}
+            ${me.name ? `<div class="hint">${icon("check")}Saved on this device</div>` : `<div class="hint">Saved on this device</div>`}
             <div style="margin-top:24px">
               <span class="label">Voting scale</span>
               <div class="decks" role="group" aria-label="Voting scale">
@@ -392,9 +392,9 @@ function viewHome() {
             <input class="input" id="code" value="${esc(ui.draftCode ?? "")}" placeholder="e.g. calm-otter-42" autocapitalize="off" autocomplete="off" spellcheck="false">
             <button class="btn" type="submit" style="height:48px;border-color:var(--ink)">${T("Join", "Vào!")}</button>
           </form>
-          ${ui.limitInfo ? `<div class="notice" role="alert"><strong>You’ve reached the limit of ${ui.limitInfo.max} rooms.</strong> Delete one of your rooms to create a new one:
+          ${ui.limitInfo ? `<div class="notice" role="alert"><strong>Room limit reached (${ui.limitInfo.max}).</strong> Delete a room to create a new one:
             <div class="notice-rooms">${ui.limitInfo.rooms.map((c) => `<a class="mono" href="/r/${esc(c)}" data-nav="/r/${esc(c)}">${esc(c)}</a>`).join("")}</div></div>` : ""}
-          ${ui.joinError ? `<div class="hint" style="color:var(--bad)">${esc(ui.joinError)}</div>` : `<div class="hint">${icon("qr")}On your phone? Scan the room’s QR code with the camera.</div>`}
+          ${ui.joinError ? `<div class="hint" style="color:var(--bad)">${esc(ui.joinError)}</div>` : ""}
           ${viewInstall()}
           ${recent.length ? `
           <div class="recent">
@@ -404,7 +404,7 @@ function viewHome() {
         </section>
       </div>
     </main>
-    ${isRetro() ? retroFooter() : `<footer><span>Internal tool · Rooms are cleared after 30 days without activity</span><span>v1.0</span></footer>`}
+    ${isRetro() ? retroFooter() : `<footer><span>Rooms are deleted after 30 days of inactivity.</span><span>v1.0</span></footer>`}
   </div>`;
 }
 function deckLabel(k) { return (HOME_DECKS.find((d) => d[0] === k) || [k, k])[1]; }
@@ -417,12 +417,12 @@ function ago(t) {
 
 function viewRoomError() {
   const e = ui.roomError;
-  const title = { not_found: T("This room doesn’t exist.", "Oops! Phòng này không tồn tại :("),
+  const title = { not_found: T("Room not found.", "Oops! Phòng này không tồn tại :("),
                   deleted: T("The host deleted this room.", "Chủ phòng đã xoá phòng này rồi :("),
                   expired: T("This room expired after 30 days without activity.", "Phòng đã hết hạn sau 30 ngày không ai ghé :(") }[e.code];
   const hint = e.code === "not_found"
-    ? "Check the code, or ask the host for a new link. Rooms are created from the home page."
-    : "Thanks for estimating! Create a new room to keep going.";
+    ? "Check the room code or ask the host for a new link."
+    : "Create a new room from the home page.";
   return `<div class="gate"><div class="inner"><a class="logo" href="/" data-nav="/">${LOGO}<b>Estimo</b></a>
     <p class="mono muted" style="margin:56px 0 0">${esc(e.room)}</p>
     <h1 style="font-family:var(--serif);font-weight:500;margin:8px 0 12px">${title}</h1>
@@ -442,17 +442,16 @@ function viewGate() {
   <div class="gate"><div class="inner">
     <a class="logo" href="/" data-nav="/">${LOGO}<b>Estimo</b></a>
     <div style="margin-top:56px">
-      <span style="font-size:14px;font-weight:500;color:var(--accent-ink)">You’ve been invited to</span>
+      <span style="font-size:14px;font-weight:500;color:var(--accent-ink)">Join room</span>
       <h1>${esc(ui.room)}</h1>
     </div>
     <form id="gate-form" style="margin-top:32px;display:flex;flex-direction:column;flex:1">
-      <label class="label" for="gnick" style="font-size:15px">What should the team call you?</label>
-      <input class="input" id="gnick" maxlength="24" autocomplete="nickname" placeholder="Your nickname" required autofocus style="height:52px;font-size:17px">
-      <div class="hint">Saved on this device, so you only type it once.</div>
-      <label class="check" style="margin-top:18px"><input type="checkbox" id="gspec" ${LS.get("spectator", false) ? "checked" : ""}>Join as spectator (watch only)</label>
+      <label class="label" for="gnick" style="font-size:15px">Your nickname</label>
+      <input class="input" id="gnick" maxlength="24" autocomplete="nickname" placeholder="e.g. Hòa" required autofocus style="height:52px;font-size:17px">
+      <div class="hint">Saved on this device</div>
+      <label class="check" style="margin-top:18px"><input type="checkbox" id="gspec" ${LS.get("spectator", false) ? "checked" : ""}>Spectator (watch without voting)</label>
       <div style="flex:1;min-height:32px"></div>
       <button class="btn btn-primary btn-lg" type="submit" style="width:100%;height:54px;font-size:17px">Join room</button>
-      <p class="muted" style="text-align:center;font-size:13px">No account or app install needed.</p>
     </form>
   </div></div>`;
 }
@@ -476,9 +475,9 @@ function viewRoom() {
     </div>
   </header>${retroTicker()}`;
   if (!s) {
-    return top + `<div class="layout"><div class="main"><div class="table"><p class="muted">${!navigator.onLine ? "You’re offline. Estimo will reconnect as soon as you’re back online." : ui.everConnected ? T("Reconnecting…", "Oops! Mất kết nối rồi. Đang thử lại…") : T("Connecting to the room…", "Đang tải… (bằng AJAX!)")}</p></div></div></div>` + (ui.showInvite ? viewInvite() : "");
+    return top + `<div class="layout"><div class="main"><div class="table"><p class="muted">${!navigator.onLine ? "You’re offline. Reconnecting when the network is back." : ui.everConnected ? T("Reconnecting…", "Oops! Mất kết nối rồi. Đang thử lại…") : T("Connecting to the room…", "Đang tải… (bằng AJAX!)")}</p></div></div></div>` + (ui.showInvite ? viewInvite() : "");
   }
-  return top + (ui.connected ? "" : `<div class="banner">${T("Connection lost — reconnecting. Your vote is kept.", "Oops! Mất kết nối rồi. Đang thử lại… phiếu của bạn vẫn còn đó ^^ (lâu quá thì F5 nhé)")}</div>`) + `
+  return top + (ui.connected ? "" : `<div class="banner">${T("Connection lost. Reconnecting — your vote is saved.", "Oops! Mất kết nối rồi. Đang thử lại… phiếu của bạn vẫn còn đó ^^ (lâu quá thì F5 nhé)")}</div>`) + `
   <div class="layout">
     <div class="main">
       ${viewTopic(s)}
@@ -500,7 +499,7 @@ function viewTopic(s) {
   <section class="card topic">
     <div class="field">
       <label for="topic">${T("Now estimating")}</label>
-      <input id="topic" maxlength="200" placeholder="Type or paste a ticket, e.g. AUTH-1423 · Login flow" value="${esc(s.topic)}" autocomplete="off">
+      <input id="topic" maxlength="200" placeholder="Ticket key or title, e.g. AUTH-1423" value="${esc(s.topic)}" autocomplete="off">
     </div>
     ${s.revealed ? "" : `<button class="btn btn-sm" data-act="skip">Skip ticket</button>`}
   </section>`;
@@ -526,7 +525,7 @@ function viewTable(s) {
   }).join("");
 
   let status;
-  if (!vs.length) status = `<p class="muted">${T("Nobody is voting yet. Invite your team with the link or QR code.", "Chưa có ai cả :( Hãy là người đầu tiên — mời đồng đội vào nhé!")}</p>`;
+  if (!vs.length) status = `<p class="muted">${T("No voters yet. Use Invite to share the room.", "Chưa có ai cả :( Hãy là người đầu tiên — mời đồng đội vào nhé!")}</p>`;
   else if (!s.revealed) {
     const waiting = vs.filter((p) => !p.voted).map((p) => p.name);
     const pct = Math.round((voted / vs.length) * 100);
@@ -541,19 +540,19 @@ function viewTable(s) {
       </div>`;
   } else {
     status = st && st.outliers.size && !st.unanimous
-      ? `<span class="legend"><span></span>Outliers — ${esc(vs.filter((p) => st.outliers.has(p.vote)).map((p) => `${p.name} (${p.vote})`).join(" and "))}, worth a quick discussion</span>`
-      : st && st.unanimous ? `<span class="legend" style="color:var(--good)">${icon("check")}Everyone agrees on ${esc(st.mode)}</span>` : "";
+      ? `<span class="legend"><span></span>Outliers: ${esc(vs.filter((p) => st.outliers.has(p.vote)).map((p) => `${p.name} (${p.vote})`).join(", "))}</span>`
+      : st && st.unanimous ? `<span class="legend" style="color:var(--good)">${icon("check")}Consensus: ${esc(st.mode)}</span>` : "";
   }
   return `<section class="table" aria-label="Table">${vs.length ? `<div class="seats">${seats}</div>` : ""}${status}</section>`;
 }
 
 function viewHand(s) {
   const mine = voters(s).find((p) => p.id === s.you);
-  if (!mine) return `<section class="hand"><p class="muted">You’re watching as a spectator. Untick “Join as spectator” to vote.</p></section>`;
+  if (!mine) return `<section class="hand"><p class="muted">Spectator mode. Turn it off under Participants to vote.</p></section>`;
   const cards = s.decks[s.deck].cards;
   return `
   <section class="hand" aria-label="Your card">
-    <span class="tip muted" style="font-size:13px">Pick a card — press <kbd>1</kbd>–<kbd>0</kbd> to vote quickly</span>
+    <span class="tip muted" style="font-size:13px">Shortcut: keys <kbd>1</kbd>–<kbd>0</kbd></span>
     <div class="cards">
       ${cards.map((c) => `<button class="vcard${META.has(c) ? " meta" : ""}${c.length > 2 ? " wide" : ""}" data-act="vote" data-v="${esc(c)}" aria-pressed="${s.mine === c}" aria-label="${c === "☕" ? "Need a break" : c === "?" ? "Not sure" : "Vote " + esc(c)}">${c === "☕" ? icon("cup") : esc(c)}</button>`).join("")}
     </div>
@@ -575,7 +574,7 @@ function viewResults(s) {
       <span class="muted" style="font-size:13px">Distribution · ${st.count} vote${st.count === 1 ? "" : "s"}</span>
       ${st.dist.map((d) => `<div class="row"><span class="v">${esc(d.v)}</span><div class="bar"><div class="${d.n === st.top ? "top" : ""}" style="width:${(d.n / st.top) * 100}%"></div></div><span class="n">${d.n}</span></div>`).join("")}
     </div>
-  </section>` : `<section class="card box"><p class="muted" style="margin:0">No numeric votes this round — only “?” or breaks.</p></section>`}
+  </section>` : `<section class="card box"><p class="muted" style="margin:0">No numeric votes this round.</p></section>`}
   <section class="card final">
     ${st ? `<div class="pick" role="group" aria-label="Final estimate">
       <span style="font-size:14px;font-weight:600">Final estimate</span>
@@ -592,15 +591,15 @@ function viewResults(s) {
 function viewPeople(s) {
   const vs = voters(s), sp = s.participants.filter((p) => p.spectator);
   const meP = s.participants.find((p) => p.id === s.you);
-  const row = (p, first) => `<li class="${first ? "spec-first" : ""}"><span class="n">${esc(p.name)}${p.id === s.you ? ' <span class="muted">(you)</span>' : ""}${p.id === s.host ? ' <span class="tag host">Host</span>' : ""}</span>${p.spectator ? '<span class="tag">Spectator</span>' : s.revealed ? `<span class="ok">${p.vote == null ? "—" : esc(p.vote)}</span>` : p.voted ? '<span class="ok">Voted</span>' : '<span class="wait">Thinking…</span>'}</li>`;
+  const row = (p, first) => `<li class="${first ? "spec-first" : ""}"><span class="n">${esc(p.name)}${p.id === s.you ? ' <span class="muted">(you)</span>' : ""}${p.id === s.host ? ' <span class="tag host">Host</span>' : ""}</span>${p.spectator ? '<span class="tag">Spectator</span>' : s.revealed ? `<span class="ok">${p.vote == null ? "—" : esc(p.vote)}</span>` : p.voted ? '<span class="ok">Voted</span>' : '<span class="wait">Not voted</span>'}</li>`;
   return `
   <section class="card box">
     <div class="box-head"><h2>${T("Participants")}</h2><span class="muted" style="font-size:13px">${s.participants.length} online</span></div>
     <ul class="plist">${vs.map((p) => row(p)).join("")}${sp.map((p, i) => row(p, i === 0 && vs.length)).join("")}</ul>
-    <label class="check" style="font-size:13px;min-height:36px;margin-top:4px"><input type="checkbox" data-act="spectator" ${meP?.spectator ? "checked" : ""} style="width:16px;height:16px">Join as spectator (don’t vote)</label>
+    <label class="check" style="font-size:13px;min-height:36px;margin-top:4px"><input type="checkbox" data-act="spectator" ${meP?.spectator ? "checked" : ""} style="width:16px;height:16px">Spectator (watch without voting)</label>
     ${s.host && s.host === s.you ? `<div class="danger-zone">
-      <button class="btn btn-sm btn-danger" data-act="deleteRoom">${ui.confirmDelete && Date.now() - ui.confirmDelete < 4000 ? "Click again to delete for everyone" : "Delete room"}</button>
-      <span class="muted">Only you (the host) can do this. You can host up to ${s.maxRooms} rooms.</span>
+      <button class="btn btn-sm btn-danger" data-act="deleteRoom">${ui.confirmDelete && Date.now() - ui.confirmDelete < 4000 ? "Click again to confirm" : "Delete room"}</button>
+      <span class="muted">Deletes the room and its history for all participants.</span>
     </div>` : ""}
   </section>`;
 }
@@ -613,7 +612,7 @@ function viewHistory(s) {
     <div class="box-head"><h2>${T("History")}</h2>${h.length ? `<button class="btn-link" data-act="csv">Export CSV</button>` : ""}</div>
     ${h.length ? `<ul class="hlist">${h.map((r) => `<li><span class="t" title="${esc(r.topic)}">${esc(r.topic)}</span><span class="pts">${esc(r.final ?? "—")}</span></li>`).join("")}</ul>
     <div class="total"><span class="muted">Session total</span><strong>${fmt(numericTotal)} pts · ${h.length} ticket${h.length === 1 ? "" : "s"}</strong></div>`
-    : `<p class="muted" style="font-size:14px;margin:10px 0 0">${T("Saved tickets appear here after “Save &amp; next ticket”.", "Chưa có gì ở đây cả :( Hãy là người đầu tiên!")}</p>`}
+    : `<p class="muted" style="font-size:14px;margin:10px 0 0">${T("No tickets estimated yet.", "Chưa có gì ở đây cả :( Hãy là người đầu tiên!")}</p>`}
   </section>`;
 }
 
@@ -623,7 +622,7 @@ function viewInvite() {
   <div class="overlay" data-act="closeInvite">
     <div class="dialog ${ui.fullInvite ? "full" : ""}" role="dialog" aria-modal="true" aria-labelledby="inv-title" data-stop>
       <div class="full-hide" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
-        <div><h2 id="inv-title">Invite your team</h2><span class="muted" style="font-size:14px">Scan with a phone camera — no app needed.</span></div>
+        <div><h2 id="inv-title">Invite your team</h2><span class="muted" style="font-size:14px">Scan with a phone camera or share the link.</span></div>
         <button class="btn btn-icon" style="border:none" data-act="closeInvite" aria-label="Close">${icon("x")}</button>
       </div>
       <div class="qr"><div id="qr" role="img" aria-label="QR code for ${esc(roomUrl())}"></div><span class="mark" aria-hidden="true"><i></i></span></div>
@@ -789,7 +788,7 @@ const isStandalone = () => matchMedia("(display-mode: standalone)").matches || n
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 let installEvent = null;
 window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvent = e; if (ui.route === "home") render(); });
-window.addEventListener("appinstalled", () => { installEvent = null; LS.set("installed", true); toast("Estimo is installed — open it from your home screen"); render(); });
+window.addEventListener("appinstalled", () => { installEvent = null; LS.set("installed", true); toast("Estimo installed."); render(); });
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
   window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
 }
@@ -805,7 +804,7 @@ function viewInstall() {
   if (isStandalone()) return "";
   const dismissed = Date.now() - LS.get("installDismissed", 0) < 14 * 86400000;
   if (installEvent && !dismissed) {
-    return `<div class="install"><img src="/icons/icon-192.png" alt=""><div class="grow"><strong>Install Estimo</strong>Opens full screen from your home screen, like a native app.</div><button class="btn btn-sm" data-act="install">Install</button></div>`;
+    return `<div class="install"><img src="/icons/icon-192.png" alt=""><div class="grow"><strong>Install Estimo</strong>Open Estimo in its own window from your home screen.</div><button class="btn btn-sm" data-act="install">Install</button></div>`;
   }
   if (isIOS() && !dismissed) {
     return `<div class="install"><img src="/icons/icon-192.png" alt=""><div class="grow"><strong>Add Estimo to your Home Screen</strong>In Safari, tap Share, then “Add to Home Screen”.</div><button class="btn btn-sm" data-act="installLater" aria-label="Hide this tip">Later</button></div>`;

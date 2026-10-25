@@ -4,3 +4,4 @@ node_modules/
 scripts/.worker.local.mjs
 *.log
 .DS_Store
+__pycache__/

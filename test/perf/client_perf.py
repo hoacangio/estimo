@@ -53,7 +53,7 @@ with sync_playwright() as p:
             window.render = function () { const t = performance.now(); orig.apply(this, arguments); window.__renders.push(performance.now() - t); };
           });""")
         pg2.goto(f"{BASE}/r/{room}")
-        pg2.fill("#gnick", "Measurer"); pg2.click("text=Join room")
+        pg2.fill("#gnick", "Measurer"); pg2.click("#gate-form button[type=submit]")
         pg2.wait_for_function(f"document.querySelectorAll('.seat').length >= {n + 1}", timeout=20000)
         pg2.evaluate("window.__renders = []")
         for v in ["1", "2", "3", "5", "8", "13", "1", "2", "3", "5", "8", "13"]:

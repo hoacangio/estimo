@@ -35,7 +35,7 @@ with sync_playwright() as p:
 
     vic_ctx = b.new_context(accept_downloads=True); vic = vic_ctx.new_page()
     vic.goto(f"{BASE}/r/{room}")
-    vic.fill("#gnick", "Victim"); vic.click("text=Join room"); vic.wait_for_selector(".table")
+    vic.fill("#gnick", "Victim"); vic.click("#gate-form button[type=submit]"); vic.wait_for_selector(".table")
 
     for pl in PAYLOADS:
         atk.fill("#topic", pl); atk.wait_for_timeout(500)
