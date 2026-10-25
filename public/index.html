@@ -164,7 +164,8 @@ select.select { height: 36px; border-radius: 8px; border: 1px solid var(--border
 .pcard { width: 60px; height: 86px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-size: 30px; font-weight: 600; transition: transform .25s ease; }
 .pcard.empty { border: 2px dashed var(--dash); }
 .pcard.down { background: var(--accent); border: 3px solid var(--surface); box-shadow: 0 0 0 2px var(--accent); }
-.pcard.up { background: var(--surface); border: 2px solid var(--accent); color: var(--ink); animation: flip .35s ease; }
+.pcard.up { background: var(--surface); border: 2px solid var(--accent); color: var(--ink); }
+.pcard.up.flip { animation: flip .35s ease; }
 .pcard.up.off { border: 1px solid var(--border-strong); }
 .pcard.up.outlier { background: var(--outlier-bg); border: 2px dashed var(--outlier); color: var(--outlier-ink); }
 .pcard.up.none { border: 1px dashed var(--dash); color: var(--muted); font-size: 16px; }

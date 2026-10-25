@@ -42,7 +42,7 @@
 [data-theme="mission"] .logo .back { stroke: var(--accent); }
 [data-theme="mission"] .logo .front { fill: var(--accent); }
 [data-theme="mission"] .live { text-transform: uppercase; letter-spacing: 2px; }
-[data-theme="mission"] .live::before { box-shadow: 0 0 8px currentColor; animation: m-blink 1.6s steps(2, start) infinite; }
+[data-theme="mission"] .live::before { box-shadow: 0 0 8px currentColor; animation: m-blink 1.6s steps(2, start) infinite; animation-delay: var(--clock, 0ms); }
 @keyframes m-blink { to { opacity: .25; } }
 [data-theme="mission"] .code { color: var(--accent-ink); }
 [data-theme="mission"] .code::before { content: "MISSION // "; color: var(--muted); }
@@ -95,7 +95,7 @@
 [data-theme="mission"] .table::before {
   content: ""; position: absolute; left: 50%; top: 110%; width: 1400px; height: 1400px; margin: -700px 0 0 -700px;
   background: conic-gradient(from 0deg, rgba(63, 208, 255, .18), transparent 40deg);
-  animation: m-sweep 6s linear infinite; pointer-events: none;
+  animation: m-sweep 6s linear infinite; animation-delay: var(--clock, 0ms); pointer-events: none;
 }
 @keyframes m-sweep { to { transform: rotate(360deg); } }
 [data-theme="mission"] .table > * { position: relative; }

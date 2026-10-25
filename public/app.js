@@ -260,7 +260,7 @@ function onState(s) {
     ui.pendingDeck = null;
   }
   if (!s.revealed) ui.final = null;
-  else if (!prev || !prev.revealed) ui.final = suggestFinal(s);
+  else if (!prev || !prev.revealed) { ui.final = suggestFinal(s); ui.flipUntil = performance.now() + 450; }
   remember(ui.room, s.deck, s.host && s.host === s.you);
   render();
 }
@@ -321,6 +321,10 @@ const app = $("#app");
 function render() {
   const active = document.activeElement;
   const keep = active && active.id ? { id: active.id, start: active.selectionStart, end: active.selectionEnd, value: active.value } : null;
+  // Infinite decorative animations use animation-delay: var(--clock). A negative delay equal to
+  // the time since page load puts every freshly rendered element at the same phase as the one it
+  // replaces, so the radar sweep, ticker and blink never jump back to the start.
+  document.documentElement.style.setProperty("--clock", `${-Math.round(performance.now())}ms`);
   if (ui.route === "home") app.innerHTML = viewHome();
   else if (!validCode(ui.room)) app.innerHTML = viewBadRoom();
   else if (ui.roomError) app.innerHTML = viewRoomError();
@@ -513,7 +517,7 @@ function viewTable(s) {
       if (p.vote == null) { cls = "pcard up none"; face = "–"; }
       else {
         const isOut = st && st.outliers.has(p.vote) && !st.unanimous;
-        cls = `pcard up${isOut ? " outlier" : META.has(p.vote) ? " off" : ""}`;
+        cls = `pcard up${isOut ? " outlier" : META.has(p.vote) ? " off" : ""}${performance.now() < (ui.flipUntil || 0) ? " flip" : ""}`;
         face = p.vote === "☕" ? icon("cup") : esc(p.vote);
       }
     } else if (p.voted) cls = "pcard down";
