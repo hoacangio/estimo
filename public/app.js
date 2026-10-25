@@ -109,7 +109,7 @@ function isDark() {
 function toggleTheme() { LS.set("theme", isDark() ? "light" : "dark"); applyTheme(); render(); }
 function setTheme(name) {
   LS.set("theme", FUN_THEMES[name] ? name : "system");
-  applyTheme(); render();
+  withTransition(() => { applyTheme(); render(); });
   if (FUN_THEMES[name]) toast(FUN_THEMES[name].hello);
 }
 function toggleRetro() { setTheme(isRetro() ? "" : RETRO); }
@@ -140,6 +140,7 @@ const ui = {
   final: null,          // chosen final estimate after reveal
   pendingDeck: null,    // deck chosen on Home for a brand-new room
   joinError: "",
+  dealAt: {},          // participant id -> time their card was dealt (one-shot animation)
 };
 
 /* ---------------- routing ---------------- */
@@ -148,7 +149,14 @@ function parseRoute() {
   if (m) { ui.route = "room"; ui.room = normalizeCode(decodeURIComponent(m[1])); }
   else { ui.route = "home"; ui.room = null; }
 }
-function go(path) { history.pushState(null, "", path); onRoute(); }
+// Big UI changes (screens, dialogs, themes) animate with the View Transitions API.
+// Realtime updates never do: they must stay instant.
+const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+function withTransition(update) {
+  if (!document.startViewTransition || reducedMotion() || isRetro()) return update();
+  document.startViewTransition(update);
+}
+function go(path) { history.pushState(null, "", path); withTransition(onRoute); }
 function onRoute() {
   parseRoute();
   if (ui.route !== "room" || ui.roomError?.room !== ui.room) ui.roomError = null;
@@ -156,7 +164,7 @@ function onRoute() {
   else disconnect();
   render();
 }
-window.addEventListener("popstate", onRoute);
+window.addEventListener("popstate", () => withTransition(onRoute));
 
 /* ---------------- websocket ---------------- */
 let ws = null, wsRoom = null, retry = 0, retryTimer = null, pingTimer = null, pingSent = 0;
@@ -233,6 +241,7 @@ function vote(card) {
   const next = s.mine === card ? null : card; // clicking your card again withdraws it
   ui.pendingVote = { v: next, deck: s.deck, at: performance.now() };
   ui.pop = { v: next, at: performance.now() };
+  if (next !== null && !s.mine) ui.dealAt[s.you] = performance.now();  // my own card lands on the table
   if (next !== null && navigator.vibrate && matchMedia("(pointer: coarse)").matches) { try { navigator.vibrate(8); } catch {} }
   applyOptimisticVote(s, next);
   render();                       // instant feedback
@@ -261,6 +270,12 @@ function onState(s) {
     if (fresh && s.deck !== ui.pendingDeck && s.decks[ui.pendingDeck]) send({ t: "deck", deck: ui.pendingDeck });
     ui.pendingDeck = null;
   }
+  // Deal a face-down card for each participant whose vote just arrived (not on first load)
+  if (prev) {
+    const was = new Map(prev.participants.map((p) => [p.id, p.voted]));
+    for (const p of s.participants) if (p.voted && was.has(p.id) && !was.get(p.id) && p.id !== s.you) ui.dealAt[p.id] = performance.now();
+  }
+  if (s.revealed && prev && !prev.revealed && navigator.vibrate && matchMedia("(pointer: coarse)").matches) { try { navigator.vibrate([10, 40, 10]); } catch {} }
   if (!s.revealed) ui.final = null;
   else if (!prev || !prev.revealed) { ui.final = suggestFinal(s); ui.flipAt = performance.now(); }
   remember(ui.room, s.deck, s.host && s.host === s.you);
@@ -327,12 +342,19 @@ function render() {
   // the time since page load puts every freshly rendered element at the same phase as the one it
   // replaces, so the radar sweep, ticker and blink never jump back to the start.
   document.documentElement.style.setProperty("--clock", `${-Math.round(performance.now())}ms`);
+  // Capture how full the vote bar looks right now, mid-animation included, so the
+  // re-rendered bar continues from there instead of jumping.
+  const oldBar = app.querySelector(".progress [data-to]");
+  ui.lastPct = oldBar ? (oldBar.getBoundingClientRect().width / oldBar.parentElement.getBoundingClientRect().width) * 100 : undefined;
   if (ui.route === "home") app.innerHTML = viewHome();
   else if (!validCode(ui.room)) app.innerHTML = viewBadRoom();
   else if (ui.roomError) app.innerHTML = viewRoomError();
   else if (!me.name) app.innerHTML = viewGate();
   else app.innerHTML = viewRoom();
   if (ui.showInvite) drawQR();
+  // The bar was rendered at the width the old bar was showing; now slide it to its target.
+  const bar = app.querySelector(".progress [data-to]");
+  if (bar && bar.style.width !== bar.dataset.to + "%") { void bar.offsetWidth; bar.style.width = bar.dataset.to + "%"; }
 
   if (keep) { const el = document.getElementById(keep.id); if (el) { if (el.tagName === "INPUT" && !el.readOnly && keep.value != null) el.value = keep.value; el.focus(); try { if (keep.start != null) el.setSelectionRange(keep.start, keep.end); } catch {} } }
   document.title = ui.route === "room" ? `${ui.room} · Estimo` : "Estimo — planning poker";
@@ -478,7 +500,7 @@ function viewRoom() {
     </div>
   </header>${retroTicker()}`;
   if (!s) {
-    return top + `<div class="layout"><div class="main"><div class="table"><p class="muted">${!navigator.onLine ? "You’re offline. Reconnecting when the network is back." : ui.everConnected ? T("Reconnecting…", "Oops! Mất kết nối rồi. Đang thử lại…") : T("Connecting to the room…", "Đang tải… (bằng AJAX!)")}</p></div></div></div>` + (ui.showInvite ? viewInvite() : "");
+    return top + `<div class="layout"><div class="main"><div class="table"><div class="skeleton" aria-hidden="true"><div class="row"><span class="bone" style="width:60px;height:86px"></span><span class="bone" style="width:60px;height:86px"></span><span class="bone" style="width:60px;height:86px"></span></div><span class="bone" style="width:200px;height:12px;border-radius:6px"></span></div><p class="muted" role="status">${!navigator.onLine ? "You’re offline. Reconnecting when the network is back." : ui.everConnected ? T("Reconnecting…", "Oops! Mất kết nối rồi. Đang thử lại…") : T("Connecting to the room…", "Đang tải… (bằng AJAX!)")}</p></div></div></div>` + (ui.showInvite ? viewInvite() : "");
   }
   return top + (ui.connected ? "" : `<div class="banner">${T("Connection lost. Reconnecting — your vote is saved.", "Oops! Mất kết nối rồi. Đang thử lại… phiếu của bạn vẫn còn đó ^^ (lâu quá thì F5 nhé)")}</div>`) + `
   <div class="layout">
@@ -531,8 +553,8 @@ function viewTable(s) {
         cls = `pcard up${isOut ? " outlier" : META.has(p.vote) ? " off" : ""}${oneShot(ui.flipAt, 350, "flip").cls}`;
         face = p.vote === "☕" ? icon("cup") : esc(p.vote);
       }
-    } else if (p.voted) cls = "pcard down";
-    return `<div class="seat ${p.id === s.you ? "mine" : ""}"><div class="${cls}"${cls.includes(" flip") ? oneShot(ui.flipAt, 350, "flip").style : ""} ${s.revealed ? "" : `aria-label="${p.voted ? "voted" : "not voted yet"}"`}>${face}</div><span class="name" title="${esc(p.name)}">${esc(p.name)}${p.id === s.you ? ' <span class="muted" style="font-weight:400">(you)</span>' : ""}</span></div>`;
+    } else if (p.voted) cls = `pcard down${oneShot(ui.dealAt[p.id], 400, "deal").cls}`;
+    return `<div class="seat ${p.id === s.you ? "mine" : ""}"><div class="${cls}"${cls.includes(" flip") ? oneShot(ui.flipAt, 350, "flip").style : cls.includes(" deal") ? oneShot(ui.dealAt[p.id], 400, "deal").style : ""} ${s.revealed ? "" : `aria-label="${p.voted ? "voted" : "not voted yet"}"`}>${face}</div><span class="name" title="${esc(p.name)}">${esc(p.name)}${p.id === s.you ? ' <span class="muted" style="font-weight:400">(you)</span>' : ""}</span></div>`;
   }).join("");
 
   let status;
@@ -543,7 +565,7 @@ function viewTable(s) {
     status = `
       <div class="status">
         <span style="color:var(--ink-2)"><strong style="color:var(--ink)">${voted} of ${vs.length}</strong> ${voted === 1 ? "has" : "have"} voted${waiting.length && waiting.length <= 3 ? ` · waiting for ${esc(waiting.join(", "))}` : ""}</span>
-        <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="${vs.length}" aria-valuenow="${voted}"><div style="width:${pct}%"></div></div>
+        <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="${vs.length}" aria-valuenow="${voted}"><div data-to="${pct}" style="width:${ui.lastPct ?? pct}%"></div></div>
         <div class="actions">
           <button class="btn btn-primary btn-lg" data-act="reveal" ${voted ? "" : "disabled"}>${T("Reveal cards", "Lật bài!")}</button>
           <button class="btn btn-lg" data-act="reset" ${voted ? "" : "disabled"}>Reset</button>
@@ -630,8 +652,9 @@ function viewHistory(s) {
 function roomUrl() { return `${location.origin}/r/${ui.room}`; }
 function viewInvite() {
   return `
-  <div class="overlay" data-act="closeInvite">
+  <div class="overlay${oneShot(ui.inviteAt, 340, "enter").cls}"${oneShot(ui.inviteAt, 340, "enter").style} data-act="closeInvite">
     <div class="dialog ${ui.fullInvite ? "full" : ""}" role="dialog" aria-modal="true" aria-labelledby="inv-title" data-stop>
+      <span class="sheet-handle" aria-hidden="true"></span>
       <div class="full-hide" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
         <div><h2 id="inv-title">Invite your team</h2><span class="muted" style="font-size:14px">Scan with a phone camera or share the link.</span></div>
         <button class="btn btn-icon" style="border:none" data-act="closeInvite" aria-label="Close">${icon("x")}</button>
@@ -691,7 +714,16 @@ function exportCsv() {
 }
 
 let toastTimer;
-function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.remove("hidden"); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add("hidden"), 2000); }
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.remove("hidden", "leave", "show"); void t.offsetWidth; t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    t.classList.replace("show", "leave");
+    toastTimer = setTimeout(() => t.classList.add("hidden"), 200);
+  }, 2200);
+}
 
 /* ---------------- events ---------------- */
 const KONAMI = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
@@ -720,9 +752,9 @@ document.addEventListener("click", (e) => {
     case "skip": send({ t: "next", topic: "" }); break;
     case "next": send({ t: "next", topic: "", final: ui.final }); break;
     case "final": ui.final = el.dataset.v; render(); break;
-    case "invite": ui.showInvite = true; ui.fullInvite = false; render(); break;
-    case "closeInvite": ui.showInvite = false; ui.fullInvite = false; render(); break;
-    case "fullInvite": ui.fullInvite = !ui.fullInvite; render(); break;
+    case "invite": ui.showInvite = true; ui.fullInvite = false; ui.inviteAt = performance.now(); render(); break;
+    case "closeInvite": withTransition(() => { ui.showInvite = false; ui.fullInvite = false; render(); }); break;
+    case "fullInvite": withTransition(() => { ui.fullInvite = !ui.fullInvite; render(); }); break;
     case "png": downloadPng(); break;
     case "copy": copy(roomUrl()); break;
     case "csv": exportCsv(); break;

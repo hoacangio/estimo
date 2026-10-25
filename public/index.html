@@ -272,17 +272,66 @@ kbd { font-family: var(--mono); font-size: 12px; border: 1px solid var(--border-
    themes; Retro 2007 keeps its own glossy press. Quick press-in, springy release. */
 button, a, select, label, input { -webkit-tap-highlight-color: transparent; }
 button, .btn, .chip, .vcard, .opt { touch-action: manipulation; -webkit-user-select: none; user-select: none; }
-:root:not([data-theme="retro2007"]) :is(.btn, .chip, .final .opt, .me, .vcard) {
-  transition: transform .18s cubic-bezier(.3, 1.5, .5, 1), filter .15s ease, background-color .15s ease, box-shadow .15s ease;
+:root:not([data-theme="retro2007"]) :where(button, a.btn, .btn-link, select, .check, .recent a, .notice-rooms a, .logo, .vcard) {
+  transition: transform .18s cubic-bezier(.3, 1.5, .5, 1), filter .15s ease, background-color .15s ease, box-shadow .15s ease, opacity .15s ease;
 }
-:root:not([data-theme="retro2007"]) :is(.btn, .chip, .final .opt, .me):active:not(:disabled) {
+:root:not([data-theme="retro2007"]) :where(button, a.btn, .btn-link, select, .logo):active:not(:disabled) {
   transform: scale(.95); filter: brightness(.92); transition-duration: .06s;
 }
+:root:not([data-theme="retro2007"]) :where(.check, .recent a, .notice-rooms a):active { transform: scale(.98); opacity: .7; transition-duration: .06s; }
+.logo { display: inline-flex; transform-origin: left center; }
 :root:not([data-theme="retro2007"]) .vcard:active:not(:disabled) { transform: translateY(2px) scale(.93); transition-duration: .06s; }
 :root:not([data-theme="retro2007"]) .vcard[aria-pressed="true"]:active:not(:disabled) { transform: translateY(-10px) scale(.95); }
 :root:not([data-theme="retro2007"]) .vcard.pop { animation: card-pop .32s cubic-bezier(.3, 1.6, .5, 1); }
 @keyframes card-pop { from { transform: translateY(2px) scale(.9); } }
-:root:not([data-theme="retro2007"]) :is(.recent a, .notice-rooms a):active { opacity: .6; }
+
+/* ---- App-like motion (all themes except Retro 2007) ---- */
+/* Screen changes cross-fade and slide (View Transitions API; skipped where unsupported) */
+::view-transition-old(root) { animation: vt-out .16s ease both; }
+::view-transition-new(root) { animation: vt-in .26s cubic-bezier(.2, .9, .3, 1) both; }
+@keyframes vt-out { to { opacity: 0; transform: translateY(-6px); } }
+@keyframes vt-in { from { opacity: 0; transform: translateY(10px); } }
+
+/* Invite: centred card on desktop, bottom sheet on phones */
+:root:not([data-theme="retro2007"]) .overlay.enter { animation: fade-in .2s ease both; }
+:root:not([data-theme="retro2007"]) .overlay.enter .dialog { animation: dialog-in .28s cubic-bezier(.2, .9, .3, 1) both; animation-delay: inherit; }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes dialog-in { from { opacity: 0; transform: translateY(16px) scale(.97); } }
+.sheet-handle { display: none; }
+@media (max-width: 640px) {
+  :root:not([data-theme="retro2007"]) .overlay { align-items: flex-end; padding: 0; }
+  :root:not([data-theme="retro2007"]) .dialog:not(.full) { max-width: none; border-radius: 20px 20px 0 0; padding: 12px 20px calc(24px + env(safe-area-inset-bottom)); max-height: 92vh; }
+  :root:not([data-theme="retro2007"]) .overlay.enter .dialog:not(.full) { animation-name: sheet-in; animation-duration: .32s; }
+  :root:not([data-theme="retro2007"]) .sheet-handle { display: block; width: 40px; height: 5px; border-radius: 3px; background: var(--border-strong); margin: 0 auto 4px; }
+}
+@keyframes sheet-in { from { transform: translateY(100%); } }
+
+/* Toasts slide up and fade away */
+.toast.show { animation: toast-in .28s cubic-bezier(.2, .9, .3, 1.2) both; }
+.toast.leave { animation: toast-out .2s ease both; }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 16px) scale(.96); } }
+@keyframes toast-out { to { opacity: 0; transform: translate(-50%, 8px); } }
+
+/* A face-down card is dealt onto the table when someone votes */
+:root:not([data-theme="retro2007"]) .pcard.down.deal { animation: deal .38s cubic-bezier(.2, .9, .3, 1.25) both; }
+@keyframes deal { from { opacity: 0; transform: translateY(-22px) rotate(-10deg) scale(.88); } }
+
+/* Vote progress fills smoothly */
+.progress div { transition: width .45s cubic-bezier(.2, .9, .3, 1); }
+
+/* Skeleton while the room loads */
+.skeleton { display: flex; flex-direction: column; align-items: center; gap: 22px; width: 100%; }
+.skeleton .row { display: flex; gap: 24px; justify-content: center; }
+.skeleton .bone { background: var(--border); border-radius: 10px; position: relative; overflow: hidden; }
+.skeleton .bone::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--surface) 70%, transparent), transparent);
+  animation: shimmer 1.4s ease-in-out infinite; animation-delay: var(--clock, 0ms); }
+@keyframes shimmer { to { transform: translateX(100%); } }
+
+/* Feels like an installed app: frosted header, no rubber-band page, no long-press menus on controls */
+.topbar { background: color-mix(in srgb, var(--surface) 82%, transparent); -webkit-backdrop-filter: saturate(1.4) blur(14px); backdrop-filter: saturate(1.4) blur(14px); }
+button, .vcard, .btn { -webkit-touch-callout: none; }
+@media (display-mode: standalone) { html, body { overscroll-behavior-y: none; } }
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
