@@ -13,7 +13,8 @@ Runs entirely on **Cloudflare Workers + Durable Objects** and fits comfortably i
 - Ticket history per room with CSV export
 - Spectator mode for PO / Scrum Master
 - Nickname and a stable client id saved in `localStorage`, so a reload or reconnect keeps your vote
-- Keyboard shortcuts `1`–`0`, dark mode, mobile layout
+- Keyboard shortcuts `1`–`0`, dark mode
+- **One-screen room:** topic, table and your cards always fit the viewport without scrolling; participants, history and settings live in a sidebar (a slide-in drawer on phones and tablets)
 - **Hosts:** whoever creates a room is its host; only the host can delete it (everyone in the room is notified)
 - **Room limit per host:** 5 by default — change `MAX_ROOMS_PER_HOST` in `wrangler.toml` and redeploy
 - **Installable app (PWA):** add to the home screen on Android, iOS and desktop; opens full screen and launches from cache even offline

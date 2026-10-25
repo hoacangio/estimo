@@ -26,6 +26,7 @@ const ICON = {
   moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   qr: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v7h-7"/>',
+  menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
   pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
   x: '<path d="M6 6l12 12M18 6 6 18"/>',
@@ -204,6 +205,7 @@ function connect() {
 }
 function disconnect() {
   clearTimeout(retryTimer); clearInterval(pingTimer);
+  ui.drawerOpen = false; ui.drawerLeaveAt = null;
   if (ws) { const s = ws; ws = null; try { s.close(1000); } catch {} }
   wsRoom = null; ui.state = null; ui.connected = false; ui.showInvite = false; ui.final = null;
 }
@@ -483,41 +485,52 @@ function viewGate() {
 
 function viewRoom() {
   const s = ui.state;
+  const de = ui.drawerOpen ? oneShot(ui.drawerLeaveAt, 240, "drawer-leave") : { cls: "", style: "" };
+  const di = ui.drawerOpen && !de.cls ? oneShot(ui.drawerAt, 300, "drawer-enter") : { cls: "", style: "" };
+  const anim = de.cls ? de : di;
   const top = `
   <header class="topbar">
     <div class="left">
-      <a class="logo" href="/" data-nav="/">${LOGO}<b class="hide-sm">Estimo</b></a>
+      <a class="logo" href="/" data-nav="/" aria-label="Estimo home">${LOGO}<b class="hide-sm">Estimo</b></a>
       <span class="sep hide-sm"></span>
       <span class="code">${esc(ui.room)}</span>
-      <span id="live" class="live ${ui.connected ? "" : "off"}">${liveText()}</span>
+      <span id="live" class="live ${ui.connected ? "" : "off"}" title="${esc(liveText())}"><span class="live-text">${liveText()}</span></span>
     </div>
     <div class="right">
-      <button class="btn btn-accent btn-sm" data-act="invite">${icon("qr")}${T("Invite", "Mời bạn bè!")}</button>
-      ${s ? `<label class="sr-only" for="deck">Voting scale</label>
-      <select class="select hide-sm" id="deck" data-act="deck">${Object.entries(s.decks).map(([k, d]) => `<option value="${k}" ${k === s.deck ? "selected" : ""}>${esc(d.label)}</option>`).join("")}</select>` : ""}
-      ${themeBtn("btn-sm")}
-      <button class="me" data-act="rename" aria-label="Change nickname"><span class="avatar">${esc(initial(me.name))}</span><span class="hide-sm">${esc(me.name)}</span>${icon("pen")}</button>
+      <button class="btn btn-accent btn-sm" data-act="invite" aria-label="Invite">${icon("qr")}<span class="label-wide">${T("Invite", "Mời bạn bè!")}</span></button>
+      ${s ? `<button class="btn btn-icon btn-sm menu-btn" data-act="toggleDrawer" aria-label="Room menu" aria-expanded="${!!ui.drawerOpen}" aria-controls="room-drawer">${icon("menu")}<span class="badge">${s.participants.length}</span></button>` : ""}
     </div>
   </header>${retroTicker()}`;
   if (!s) {
-    return top + `<div class="layout"><div class="main"><div class="table"><div class="skeleton" aria-hidden="true"><div class="row"><span class="bone" style="width:60px;height:86px"></span><span class="bone" style="width:60px;height:86px"></span><span class="bone" style="width:60px;height:86px"></span></div><span class="bone" style="width:200px;height:12px;border-radius:6px"></span></div><p class="muted" role="status">${!navigator.onLine ? "You’re offline. Reconnecting when the network is back." : ui.everConnected ? T("Reconnecting…", "Oops! Mất kết nối rồi. Đang thử lại…") : T("Connecting to the room…", "Đang tải… (bằng AJAX!)")}</p></div></div></div>` + (ui.showInvite ? viewInvite() : "");
+    return `<div class="room">${top}<div class="room-body"><main class="stage"><div class="stage-scroll"><div class="table"><div class="skeleton" aria-hidden="true"><div class="row"><span class="bone" style="width:60px;height:86px"></span><span class="bone" style="width:60px;height:86px"></span><span class="bone" style="width:60px;height:86px"></span></div><span class="bone" style="width:200px;height:12px;border-radius:6px"></span></div><p class="muted" role="status">${!navigator.onLine ? "You’re offline. Reconnecting when the network is back." : ui.everConnected ? T("Reconnecting…", "Oops! Mất kết nối rồi. Đang thử lại…") : T("Connecting to the room…", "Đang tải… (bằng AJAX!)")}</p></div></div></main></div></div>` + (ui.showInvite ? viewInvite() : "");
   }
-  return top + (ui.connected ? "" : `<div class="banner">${T("Connection lost. Reconnecting — your vote is saved.", "Oops! Mất kết nối rồi. Đang thử lại… phiếu của bạn vẫn còn đó ^^ (lâu quá thì F5 nhé)")}</div>`) + `
-  <div class="layout">
-    <div class="main">
-      ${viewTopic(s)}
-      ${viewTable(s)}
-      ${s.revealed ? viewResults(s) : viewHand(s)}
+  return `<div class="room${ui.drawerOpen ? " drawer-open" : ""}${anim.cls}">${top}`
+    + (ui.connected ? "" : `<div class="banner">${T("Connection lost. Reconnecting — your vote is saved.", "Oops! Mất kết nối rồi. Đang thử lại… phiếu của bạn vẫn còn đó ^^ (lâu quá thì F5 nhé)")}</div>`) + `
+    <div class="room-body">
+      <main class="stage${s.revealed ? " revealed" : ""}">
+        ${viewTopic(s)}
+        <div class="stage-scroll">${viewTable(s)}${s.revealed ? viewResults(s) : ""}</div>
+        <div class="dock">${s.revealed ? viewFinal(s) : viewHand(s)}</div>
+      </main>
+      <aside class="drawer" id="room-drawer" aria-label="Room details"${anim.style}>
+        <div class="drawer-head"><h2>Room</h2><button class="btn btn-icon btn-sm" data-act="closeDrawer" aria-label="Close room menu">${icon("x")}</button></div>
+        ${viewPeople(s)}
+        ${viewHistory(s)}
+        ${viewSettings(s)}
+      </aside>
     </div>
-    <aside class="side">
-      ${viewPeople(s)}
-      ${viewHistory(s)}
-    </aside>
-  </div>` + (isRetro() ? retroFooter() : "") + (ui.showInvite ? viewInvite() : "");
+    ${ui.drawerOpen ? `<div class="scrim" data-act="closeDrawer"${anim.style}></div>` : ""}
+  </div>` + (ui.showInvite ? viewInvite() : "");
+}
+function openDrawer() { ui.drawerOpen = true; ui.drawerAt = performance.now(); ui.drawerLeaveAt = null; render(); }
+function closeDrawer() {
+  if (!ui.drawerOpen || ui.drawerLeaveAt) return;
+  ui.drawerLeaveAt = performance.now(); render();
+  setTimeout(() => { ui.drawerOpen = false; ui.drawerLeaveAt = null; render(); }, reducedMotion() || isRetro() ? 0 : 220);
 }
 const initial = (n) => (n || "?").trim().charAt(0).toUpperCase();
 function liveText() { return ui.connected ? `Live${ui.rtt != null ? " · " + ui.rtt + " ms" : ""}` : "Offline"; }
-function updateLive() { const el = $("#live"); if (el) el.textContent = liveText(); }
+function updateLive() { const el = $("#live .live-text"); if (el) el.textContent = liveText(); }
 
 function viewTopic(s) {
   return `
@@ -526,7 +539,7 @@ function viewTopic(s) {
       <label for="topic">${T("Now estimating")}</label>
       <input id="topic" maxlength="200" placeholder="Ticket key or title, e.g. AUTH-1423" value="${esc(s.topic)}" autocomplete="off">
     </div>
-    ${s.revealed ? "" : `<button class="btn btn-sm" data-act="skip">Skip ticket</button>`}
+    ${s.revealed ? "" : `<button class="btn btn-sm" data-act="skip">Skip</button>`}
   </section>`;
 }
 
@@ -567,8 +580,8 @@ function viewTable(s) {
         <span style="color:var(--ink-2)"><strong style="color:var(--ink)">${voted} of ${vs.length}</strong> ${voted === 1 ? "has" : "have"} voted${waiting.length && waiting.length <= 3 ? ` · waiting for ${esc(waiting.join(", "))}` : ""}</span>
         <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="${vs.length}" aria-valuenow="${voted}"><div data-to="${pct}" style="width:${ui.lastPct ?? pct}%"></div></div>
         <div class="actions">
-          <button class="btn btn-primary btn-lg" data-act="reveal" ${voted ? "" : "disabled"}>${T("Reveal cards", "Lật bài!")}</button>
-          <button class="btn btn-lg" data-act="reset" ${voted ? "" : "disabled"}>Reset</button>
+          <button class="btn btn-primary" data-act="reveal" ${voted ? "" : "disabled"}>${T("Reveal cards", "Lật bài!")}</button>
+          <button class="btn" data-act="reset" ${voted ? "" : "disabled"}>Reset</button>
         </div>
       </div>`;
   } else {
@@ -581,7 +594,7 @@ function viewTable(s) {
 
 function viewHand(s) {
   const mine = voters(s).find((p) => p.id === s.you);
-  if (!mine) return `<section class="hand"><p class="muted">Spectator mode. Turn it off under Participants to vote.</p></section>`;
+  if (!mine) return `<section class="hand"><p class="muted">Spectator mode. Turn it off in Settings to vote.</p></section>`;
   const cards = s.decks[s.deck].cards;
   return `
   <section class="hand" aria-label="Your card">
@@ -594,7 +607,6 @@ function viewHand(s) {
 
 function viewResults(s) {
   const st = computeStats(s);
-  const opts = st ? [...new Set([st.cards[Math.floor(st.medIdx) - 1], st.cards[Math.floor(st.medIdx)], st.cards[Math.ceil(st.medIdx)], st.cards[Math.ceil(st.medIdx) + 1], ui.final].filter(Boolean))].sort((a, b) => st.cards.indexOf(a) - st.cards.indexOf(b)) : [];
   return `
   ${st ? `<section class="stats">
     <div class="card kpis">
@@ -608,9 +620,16 @@ function viewResults(s) {
       ${st.dist.map((d) => `<div class="row"><span class="v">${esc(d.v)}</span><div class="bar"><div class="${d.n === st.top ? "top" : ""}" style="width:${(d.n / st.top) * 100}%"></div></div><span class="n">${d.n}</span></div>`).join("")}
     </div>
   </section>` : `<section class="card box"><p class="muted" style="margin:0">No numeric votes this round.</p></section>`}
+  `;
+}
+
+function viewFinal(s) {
+  const st = computeStats(s);
+  const opts = st ? [...new Set([st.cards[Math.floor(st.medIdx) - 1], st.cards[Math.floor(st.medIdx)], st.cards[Math.ceil(st.medIdx)], st.cards[Math.ceil(st.medIdx) + 1], ui.final].filter(Boolean))].sort((a, b) => st.cards.indexOf(a) - st.cards.indexOf(b)) : [];
+  return `
   <section class="card final">
     ${st ? `<div class="pick" role="group" aria-label="Final estimate">
-      <span style="font-size:14px;font-weight:600">Final estimate</span>
+      <span class="pick-label">Final</span>
       ${opts.map((o) => `<button class="opt" data-act="final" data-v="${esc(o)}" aria-pressed="${o === ui.final}">${esc(o)}</button>`).join("")}
       <span class="muted" style="font-size:13px">Suggested: ${st.unanimous ? "consensus" : "median"}</span>
     </div>` : "<span></span>"}
@@ -623,13 +642,25 @@ function viewResults(s) {
 
 function viewPeople(s) {
   const vs = voters(s), sp = s.participants.filter((p) => p.spectator);
-  const meP = s.participants.find((p) => p.id === s.you);
   const row = (p, first) => `<li class="${first ? "spec-first" : ""}"><span class="n">${esc(p.name)}${p.id === s.you ? ' <span class="muted">(you)</span>' : ""}${p.id === s.host ? ' <span class="tag host">Host</span>' : ""}</span>${p.spectator ? '<span class="tag">Spectator</span>' : s.revealed ? `<span class="ok">${p.vote == null ? "—" : esc(p.vote)}</span>` : p.voted ? '<span class="ok">Voted</span>' : '<span class="wait">Not voted</span>'}</li>`;
   return `
   <section class="card box">
     <div class="box-head"><h2>${T("Participants")}</h2><span class="muted" style="font-size:13px">${s.participants.length} online</span></div>
     <ul class="plist">${vs.map((p) => row(p)).join("")}${sp.map((p, i) => row(p, i === 0 && vs.length)).join("")}</ul>
-    <label class="check" style="font-size:13px;min-height:36px;margin-top:4px"><input type="checkbox" data-act="spectator" ${meP?.spectator ? "checked" : ""} style="width:16px;height:16px">Spectator (watch without voting)</label>
+  </section>`;
+}
+
+function viewSettings(s) {
+  const meP = s.participants.find((p) => p.id === s.you);
+  return `
+  <section class="card box settings">
+    <div class="box-head"><h2>Settings</h2></div>
+    <div class="set-row"><label for="deck">Voting scale</label>
+      <select class="select" id="deck" data-act="deck">${Object.entries(s.decks).map(([k, d]) => `<option value="${k}" ${k === s.deck ? "selected" : ""}>${esc(d.label)}</option>`).join("")}</select></div>
+    <div class="set-row"><span>Theme</span>${themeBtn("btn-sm")}</div>
+    <div class="set-row"><span>Nickname</span>
+      <button class="me" data-act="rename" aria-label="Change nickname"><span class="avatar">${esc(initial(me.name))}</span><span>${esc(me.name)}</span>${icon("pen")}</button></div>
+    <label class="check set-check"><input type="checkbox" data-act="spectator" ${meP?.spectator ? "checked" : ""}>Spectator (watch without voting)</label>
     ${s.host && s.host === s.you ? `<div class="danger-zone">
       <button class="btn btn-sm btn-danger" data-act="deleteRoom">${ui.confirmDelete && Date.now() - ui.confirmDelete < 4000 ? "Click again to confirm" : "Delete room"}</button>
       <span class="muted">Deletes the room and its history for all participants.</span>
@@ -752,6 +783,8 @@ document.addEventListener("click", (e) => {
     case "skip": send({ t: "next", topic: "" }); break;
     case "next": send({ t: "next", topic: "", final: ui.final }); break;
     case "final": ui.final = el.dataset.v; render(); break;
+    case "toggleDrawer": ui.drawerOpen && !ui.drawerLeaveAt ? closeDrawer() : openDrawer(); break;
+    case "closeDrawer": closeDrawer(); break;
     case "invite": ui.showInvite = true; ui.fullInvite = false; ui.inviteAt = performance.now(); render(); break;
     case "closeInvite": withTransition(() => { ui.showInvite = false; ui.fullInvite = false; render(); }); break;
     case "fullInvite": withTransition(() => { ui.fullInvite = !ui.fullInvite; render(); }); break;
@@ -804,6 +837,7 @@ document.addEventListener("submit", (e) => {
 });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && ui.showInvite) { ui.showInvite = false; ui.fullInvite = false; render(); return; }
+  if (e.key === "Escape" && ui.drawerOpen) { closeDrawer(); return; }
   const tag = (e.target.tagName || "").toLowerCase();
   if (tag === "input" || tag === "select" || tag === "textarea" || e.metaKey || e.ctrlKey || e.altKey) return;
   const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
