@@ -6,6 +6,14 @@
 <title>Estimo — planning poker</title>
 <meta name="description" content="Realtime planning poker for agile teams. No sign-up.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Crect x='3' y='6' width='14' height='19' rx='3' fill='none' stroke='%23141413' stroke-width='2'/%3E%3Crect x='11' y='3' width='14' height='19' rx='3' fill='%23D97757'/%3E%3C/svg%3E">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#FAF9F5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1F1E1D" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Estimo">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <script src="/qr.js" defer></script>
@@ -48,7 +56,7 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
-body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.5; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.5; min-height: 100vh; -webkit-font-smoothing: antialiased; }
 button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .5; }
@@ -83,6 +91,10 @@ a { color: var(--accent-ink); }
 .notice { margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-soft-ink); font-size: 14px; }
 .notice-rooms { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .notice-rooms a { font-size: 13px; }
+.install { display: flex; align-items: center; gap: 10px; margin-top: 18px; padding: 12px 14px; border-radius: 12px; border: 1px dashed var(--border-strong); font-size: 13px; color: var(--muted); }
+.install img { width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0; }
+.install .grow { flex: 1; min-width: 0; }
+.install strong { color: var(--ink); display: block; font-size: 14px; }
 .btn-link { border: none; background: none; color: var(--accent-ink); padding: 4px 0; font-size: 14px; }
 .input { height: 48px; width: 100%; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface); padding: 0 14px; font-size: 16px; }
 .input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
@@ -249,7 +261,7 @@ kbd { font-family: var(--mono); font-size: 12px; border: 1px solid var(--border-
   .layout { padding: 14px; gap: 16px; }
   .table { padding: 24px 12px; }
   .seats { gap: 14px; }
-  .hand { position: sticky; bottom: 0; background: var(--bg); padding: 4px 0 12px; z-index: 4; }
+  .hand { position: sticky; bottom: 0; background: var(--bg); padding: 4px 0 calc(12px + env(safe-area-inset-bottom)); z-index: 4; }
   .hand .cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; gap: 8px; }
   .vcard, .vcard.wide { width: auto; height: 64px; }
   .vcard[aria-pressed="true"] { transform: none; }

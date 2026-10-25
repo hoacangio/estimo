@@ -152,7 +152,7 @@ try {
     else if (inBlock && line.includes(":")) { const i = line.indexOf(":"); HEADERS[line.slice(0, i).trim()] = line.slice(i + 1).trim(); }
   }
 } catch {}
-const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".json": "application/json", ".ico": "image/x-icon" };
+const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".json": "application/json", ".ico": "image/x-icon", ".webmanifest": "application/manifest+json" };
 const server = http.createServer(async (req, res) => {
   const p = decodeURIComponent(new URL(req.url, "http://x").pathname);
   if (p === "/api/health") { res.writeHead(200, { "content-type": "application/json" }); return res.end('{"ok":true}'); }

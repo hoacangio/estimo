@@ -395,6 +395,7 @@ function viewHome() {
           ${ui.limitInfo ? `<div class="notice" role="alert"><strong>You’ve reached the limit of ${ui.limitInfo.max} rooms.</strong> Delete one of your rooms to create a new one:
             <div class="notice-rooms">${ui.limitInfo.rooms.map((c) => `<a class="mono" href="/r/${esc(c)}" data-nav="/r/${esc(c)}">${esc(c)}</a>`).join("")}</div></div>` : ""}
           ${ui.joinError ? `<div class="hint" style="color:var(--bad)">${esc(ui.joinError)}</div>` : `<div class="hint">${icon("qr")}On your phone? Scan the room’s QR code with the camera.</div>`}
+          ${viewInstall()}
           ${recent.length ? `
           <div class="recent">
             <h2>Recent rooms</h2>
@@ -475,7 +476,7 @@ function viewRoom() {
     </div>
   </header>${retroTicker()}`;
   if (!s) {
-    return top + `<div class="layout"><div class="main"><div class="table"><p class="muted">${ui.everConnected ? T("Reconnecting…", "Oops! Mất kết nối rồi. Đang thử lại…") : T("Connecting to the room…", "Đang tải… (bằng AJAX!)")}</p></div></div></div>` + (ui.showInvite ? viewInvite() : "");
+    return top + `<div class="layout"><div class="main"><div class="table"><p class="muted">${!navigator.onLine ? "You’re offline. Estimo will reconnect as soon as you’re back online." : ui.everConnected ? T("Reconnecting…", "Oops! Mất kết nối rồi. Đang thử lại…") : T("Connecting to the room…", "Đang tải… (bằng AJAX!)")}</p></div></div></div>` + (ui.showInvite ? viewInvite() : "");
   }
   return top + (ui.connected ? "" : `<div class="banner">${T("Connection lost — reconnecting. Your vote is kept.", "Oops! Mất kết nối rồi. Đang thử lại… phiếu của bạn vẫn còn đó ^^ (lâu quá thì F5 nhé)")}</div>`) + `
   <div class="layout">
@@ -715,6 +716,8 @@ document.addEventListener("click", (e) => {
     case "png": downloadPng(); break;
     case "copy": copy(roomUrl()); break;
     case "csv": exportCsv(); break;
+    case "install": installApp(); break;
+    case "installLater": LS.set("installDismissed", Date.now()); render(); break;
     case "deleteRoom":
       // Two-step confirm without a blocking browser dialog
       if (ui.confirmDelete && Date.now() - ui.confirmDelete < 4000) { ui.confirmDelete = null; send({ t: "deleteRoom" }); }
@@ -776,6 +779,38 @@ async function copy(text) {
   catch { const i = $("#link"); if (i) { i.select(); document.execCommand("copy"); toast("Link copied"); } }
 }
 matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => render());
+// Back online: reconnect now instead of waiting for the next backoff step
+window.addEventListener("online", () => { if (ui.route === "room" && me.name && !ui.roomError && (!ws || ws.readyState > 1)) { retry = 0; connect(); } });
+window.addEventListener("offline", () => render());
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && ui.route === "room" && me.name && (!ws || ws.readyState > 1)) { retry = 0; connect(); } });
+
+/* ---------------- PWA: offline shell + install ---------------- */
+const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+let installEvent = null;
+window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvent = e; if (ui.route === "home") render(); });
+window.addEventListener("appinstalled", () => { installEvent = null; LS.set("installed", true); toast("Estimo is installed — open it from your home screen"); render(); });
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
+}
+async function installApp() {
+  if (!installEvent) return;
+  installEvent.prompt();
+  const { outcome } = await installEvent.userChoice.catch(() => ({}));
+  installEvent = null;
+  if (outcome === "dismissed") LS.set("installDismissed", Date.now());
+  render();
+}
+function viewInstall() {
+  if (isStandalone()) return "";
+  const dismissed = Date.now() - LS.get("installDismissed", 0) < 14 * 86400000;
+  if (installEvent && !dismissed) {
+    return `<div class="install"><img src="/icons/icon-192.png" alt=""><div class="grow"><strong>Install Estimo</strong>Opens full screen from your home screen, like a native app.</div><button class="btn btn-sm" data-act="install">Install</button></div>`;
+  }
+  if (isIOS() && !dismissed) {
+    return `<div class="install"><img src="/icons/icon-192.png" alt=""><div class="grow"><strong>Add Estimo to your Home Screen</strong>In Safari, tap Share, then “Add to Home Screen”.</div><button class="btn btn-sm" data-act="installLater" aria-label="Hide this tip">Later</button></div>`;
+  }
+  return "";
+}
 
 onRoute();

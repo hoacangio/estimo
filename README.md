@@ -16,6 +16,7 @@ Runs entirely on **Cloudflare Workers + Durable Objects** and fits comfortably i
 - Keyboard shortcuts `1`–`0`, dark mode, mobile layout
 - **Hosts:** whoever creates a room is its host; only the host can delete it (everyone in the room is notified)
 - **Room limit per host:** 5 by default — change `MAX_ROOMS_PER_HOST` in `wrangler.toml` and redeploy
+- **Installable app (PWA):** add to the home screen on Android, iOS and desktop; opens full screen and launches from cache even offline
 - **Fun themes**, lazy-loaded so the default theme pays nothing (Retro 2007 also via the Konami code ↑↑↓↓←→←→BA)
 
 ## Architecture
