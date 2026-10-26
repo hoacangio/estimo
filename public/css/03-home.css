@@ -1,0 +1,94 @@
+/* Estimo — Home screen and the join gate. */
+
+/* ---------- home ---------- */
+.home { min-height: 100vh; display: flex; flex-direction: column; }
+.home header { display: flex; justify-content: space-between; align-items: center; padding: 20px 32px; }
+.home main { flex: 1; display: flex; justify-content: center; padding: 40px 16px 64px; }
+.home .wrap { width: 100%; max-width: 980px; display: flex; flex-wrap: wrap; gap: 56px; align-items: flex-start; }
+.hero { flex: 1 1 380px; min-width: 0; padding-top: 24px; }
+.hero .eyebrow { margin: 0 0 18px; font-size: 14px; font-weight: 500; color: var(--accent-ink); }
+.hero h1 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: clamp(40px, 6vw, 56px); line-height: 1.08; }
+.hero p { margin: 22px 0 0; font-size: 18px; color: var(--muted); max-width: 430px; }
+.fan { display: flex; gap: 12px; margin-top: 44px; }
+.fan div { width: 64px; height: 92px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-size: 30px; font-weight: 500; }
+.fan div:nth-child(1) { transform: rotate(-6deg); }
+.fan div:nth-child(2) { transform: translateY(-10px); background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+.fan div:nth-child(3) { transform: rotate(6deg); }
+.panel { flex: 1 1 420px; min-width: 0; padding: 32px; border-radius: 18px; box-shadow: 0 10px 30px var(--shadow); }
+.hint { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.hint svg.i { width: 14px; height: 14px; }
+.decks { display: flex; flex-wrap: wrap; gap: 8px; }
+.divider { display: flex; align-items: center; gap: 12px; margin: 24px 0; color: var(--muted); font-size: 13px; }
+.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.join-row { display: flex; gap: 8px; }
+.join-row .input { font-size: 16px; }
+.recent { margin-top: 26px; border-top: 1px solid var(--surface-2); padding-top: 20px; }
+.recent h2 { margin: 0; font-size: 13px; font-weight: 600; color: var(--muted); }
+.recent a { display: flex; justify-content: space-between; padding: 12px 0; text-decoration: none; color: var(--ink); border-bottom: 1px solid var(--surface-2); }
+.recent a:last-child { border-bottom: none; }
+.deck-field { margin-top: 24px; }
+.recent-row { display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--surface-2); }
+.recent-row:last-child { border-bottom: none; }
+.recent-row a { flex: 1; min-width: 0; gap: 8px; border-bottom: none !important; }
+.recent-row a .mono { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-row a > .muted { flex: none; }
+.row-act { flex: none; border-color: transparent; background: transparent; color: var(--muted); width: 36px; height: 36px; margin-right: -8px; }
+.row-act:hover:not(:disabled) { color: var(--bad); border-color: var(--border); }
+.row-act svg.i { width: 18px; height: 18px; }
+.nr { display: inline-flex; align-items: center; gap: 2px; }
+.nr-del { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: none; background: none; color: inherit; border-radius: 8px; opacity: .8; }
+.nr-del:hover { opacity: 1; background: color-mix(in srgb, currentColor 12%, transparent); }
+.nr-del svg.i { width: 16px; height: 16px; }
+.create-btn:disabled { opacity: .55; cursor: not-allowed; }
+.room-sheet { max-width: 420px; gap: 12px; }
+.room-sheet h2 { font-size: 24px; }
+.room-sheet p { margin: 0; }
+.sheet-code { font-size: 15px; padding: 8px 12px; border-radius: 10px; background: var(--surface-2); align-self: flex-start; word-break: break-all; }
+.sheet-error { color: var(--bad); font-size: 14px; }
+.sheet-actions { display: flex; gap: 10px; margin-top: 8px; }
+.sheet-actions .btn { flex: 1; }
+.btn-danger-solid { background: var(--bad); border-color: var(--bad); color: #fff; }
+.btn-danger-solid:hover:not(:disabled) { filter: brightness(1.08); }
+.danger-zone .btn svg.i { width: 16px; height: 16px; }
+.create-btn { width: 100%; margin-top: 28px; }
+.recent-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px; }
+.pager { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.pager .btn { width: 32px; height: 32px; font-size: 18px; line-height: 1; }
+/* Phones: the home screen fits one screen — the form, join and recent rooms only */
+@media (max-width: 640px) {
+  .home { min-height: 100vh; min-height: 100dvh; }
+  .home > header { padding: 8px 14px; }
+  .home > header .btn-icon { width: 36px; height: 36px; }
+  .home > header .theme-pick { height: 36px; }
+  .home main { flex: 1; padding: 4px 12px calc(10px + env(safe-area-inset-bottom)); align-items: flex-start; }
+  .home .wrap { gap: 0; }
+  .home .hero, :root .home > footer, :root .home .r-footer { display: none !important; }
+  .panel { flex-basis: auto; padding: 16px; border-radius: 16px; }
+  .panel .label { margin-bottom: 6px; }
+  .panel .input { height: 44px; }
+  .saved-hint, .deck-hint { display: none; }
+  .deck-field { margin-top: 12px; }
+  .decks { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px; scroll-padding: 16px; }
+  .decks::-webkit-scrollbar { display: none; }
+  .decks .chip { flex: none; height: 36px; padding: 0 12px; }
+  .create-btn { margin-top: 14px; height: 48px; }
+  .divider { margin: 10px 0; }
+  .join-row .btn { height: 44px !important; }
+  .install { margin-top: 10px; padding: 8px 10px; gap: 8px; font-size: 12px; line-height: 1.35; }
+  .install img { width: 24px; height: 24px; border-radius: 6px; }
+  .install strong { font-size: 13px; }
+  .recent { margin-top: 10px; padding-top: 6px; }
+  .recent a { padding: 8px 0; }
+  .home.tight .install img { display: none; }
+  .home.tight main { padding-bottom: calc(8px + env(safe-area-inset-bottom)) !important; }
+  .home.tight .divider { margin: 6px 0; }
+  .home.tight .create-btn { margin-top: 10px; }
+}
+.home footer { padding: 20px 32px; font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+/* ---------- join gate ---------- */
+.gate { min-height: 100vh; display: flex; justify-content: center; padding: 24px 20px; }
+.gate .inner { width: 100%; max-width: 420px; display: flex; flex-direction: column; }
+.gate h1 { margin: 8px 0 0; font-family: var(--mono); font-weight: 500; font-size: 24px; word-break: break-all; }
+.check { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15px; color: var(--ink-2); }
+.check input { width: 20px; height: 20px; accent-color: var(--accent); }

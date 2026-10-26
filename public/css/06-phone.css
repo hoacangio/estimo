@@ -1,0 +1,18 @@
+/* Estimo — Phone tweaks (≤ 640px) for the pieces above. */
+
+/* mobile */
+@media (max-width: 640px) {
+  .home header, .home footer { padding: 16px 20px; }
+  .panel { padding: 22px; }
+  .topbar { padding: 10px 14px; }
+  .topbar .hide-sm { display: none; }
+  .layout { padding: 14px; gap: 16px; }
+  .table { padding: 24px 12px; }
+  .seats { gap: 14px; }
+  .hand { position: sticky; bottom: 0; background: var(--bg); padding: 4px 0 calc(12px + env(safe-area-inset-bottom)); z-index: 4; }
+  .hand .cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; gap: 8px; }
+  .vcard, .vcard.wide { width: auto; height: 64px; }
+  .vcard[aria-pressed="true"] { transform: none; }
+  :root:not([data-theme="retro2007"]) .vcard[aria-pressed="true"]:active:not(:disabled) { transform: scale(.95); }
+  .hand .tip { display: none; }
+}

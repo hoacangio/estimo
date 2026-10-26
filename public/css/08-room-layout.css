@@ -1,0 +1,99 @@
+/* Estimo — Room layout that fits one screen: stage + sidebar (a drawer below 1024px). */
+
+/* ---- Room: one screen. Stage (topic, table, hand) + sidebar; the sidebar is a drawer below 1024px ---- */
+.room { height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+.room .topbar { flex: none; position: relative; flex-wrap: nowrap; padding: 10px 20px; gap: 10px; }
+.room .topbar .left { min-width: 0; flex-wrap: nowrap; }
+.room .topbar .right { flex-wrap: nowrap; gap: 8px; }
+.room .code { white-space: nowrap; }
+.room .banner { flex: none; }
+.room-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 340px; }
+.stage { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 16px 20px 0; }
+.stage .topic { flex: none; padding: 10px 16px; gap: 12px; flex-wrap: nowrap; }
+.stage .topic .field { flex: 1 1 auto; }
+.stage .topic label { font-size: 12px; }
+.stage .topic input { font-size: 18px; }
+.stage-scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; overscroll-behavior: contain; }
+.stage .table { flex: 1 0 auto; justify-content: center; padding: 20px 16px; gap: 18px; border-radius: 16px; }
+.stage.revealed .table { flex: 0 0 auto; }
+.stage .status { gap: 10px; }
+.stage .stats { gap: 12px; }
+.stage .stats > .card { padding: 14px 16px; flex-basis: 260px; }
+.stage .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.stage .kpi b { font-size: 28px; }
+.stage .kpi b.sm { font-size: 18px; }
+.stage .dist { gap: 6px; }
+.stage .dist .bar { height: 10px; }
+.dock { flex: none; padding: 10px 0 calc(14px + env(safe-area-inset-bottom)); }
+.dock .hand { gap: 6px; }
+.dock .hand .cards { padding-top: 12px; }
+.dock .final { padding: 12px 16px; }
+.dock .final .btn-lg { height: 44px; padding: 0 18px; font-size: 15px; }
+.pick-label { font-size: 14px; font-weight: 600; }
+.drawer { min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 12px; padding: 16px; border-left: 1px solid var(--border); background: var(--bg); }
+.drawer-head { display: none; }
+.drawer > * { flex: none; }
+.room .live { white-space: nowrap; }
+.drawer .box { padding: 14px 16px; }
+.drawer .box h2 { font-size: 16px; }
+.settings .set-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; font-size: 14px; }
+.settings .set-row .select { max-width: 180px; height: 36px; }
+.settings .theme-btns { display: inline-flex; gap: 6px; }
+.settings .theme-pick { max-width: 140px; height: 36px; }
+.set-check { font-size: 14px; min-height: 36px; }
+.set-check input { width: 16px; height: 16px; }
+.menu-btn { position: relative; display: none; }
+.menu-btn .badge { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--accent); color: var(--on-accent); font-size: 11px; font-weight: 600; line-height: 18px; text-align: center; }
+.scrim { display: none; }
+@media (max-width: 1023px) {
+  .room-body { grid-template-columns: minmax(0, 1fr); }
+  .menu-btn { display: inline-flex; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(360px, 88vw); z-index: 21; border-left: 1px solid var(--border-strong); box-shadow: -12px 0 40px var(--shadow); padding-top: calc(12px + env(safe-area-inset-top)); padding-bottom: calc(16px + env(safe-area-inset-bottom)); transform: translateX(105%); visibility: hidden; }
+  .room.drawer-open .drawer { transform: none; visibility: visible; }
+  .drawer-head { display: flex; align-items: center; justify-content: space-between; }
+  .drawer-head h2 { margin: 0; font-family: var(--serif); font-size: 20px; font-weight: 500; }
+  .room.drawer-open .scrim { display: block; position: fixed; inset: 0; z-index: 20; background: var(--overlay); }
+  :root:not([data-theme="retro2007"]) .room.drawer-enter .drawer { animation: drawer-in .3s cubic-bezier(.2, .9, .3, 1) both; animation-delay: inherit; }
+  :root:not([data-theme="retro2007"]) .room.drawer-enter .scrim { animation: fade-in .25s ease both; }
+  :root:not([data-theme="retro2007"]) .room.drawer-leave .drawer { animation: drawer-out .22s ease both; }
+  :root:not([data-theme="retro2007"]) .room.drawer-leave .scrim { animation: fade-out .22s ease both; }
+}
+@keyframes drawer-in { from { transform: translateX(100%); } }
+@keyframes drawer-out { to { transform: translateX(100%); } }
+@keyframes fade-out { to { opacity: 0; } }
+@media (max-width: 640px) {
+  .room .topbar { padding: 8px 12px; }
+  .room .topbar .label-wide { display: none; }
+  .room .live-text { display: none; }
+  .room .topbar [data-act=invite] { width: 36px; padding: 0; }
+  .stage { padding: 10px 12px 0; gap: 8px; }
+  .stage .topic { padding: 8px 12px; }
+  .stage .topic label { font-size: 11px; }
+  .stage .topic input { font-size: 16px; }
+  .stage-scroll { gap: 8px; }
+  .stage .table { padding: 14px 8px; gap: 12px; border-radius: 14px; }
+  .stage .seats { gap: 10px 8px; }
+  .stage .seat { width: 54px; gap: 6px; }
+  .stage .seat .name { font-size: 12px; max-width: 54px; }
+  .stage .seat .name .muted { display: none; }
+  .stage .pcard { width: 40px; height: 56px; font-size: 20px; border-radius: 8px; }
+  .stage .status { gap: 8px; font-size: 14px; }
+  .stage .status .actions .btn { height: 40px; }
+  .stage .stats { flex-direction: column; gap: 8px; }
+  .stage .stats > .card { flex-basis: auto; padding: 10px 12px; }
+  .stage .kpi span { font-size: 11px; }
+  .stage .kpi b { font-size: 20px; }
+  .stage .kpi b.sm { font-size: 14px; }
+  .stage .kpi b.sm .muted { display: none; }
+  .stage .dist .row { gap: 8px; font-size: 13px; }
+  .dock { padding: 8px 0 calc(10px + env(safe-area-inset-bottom)); }
+  .dock .hand { position: static; padding: 0; background: none; }
+  .dock .hand .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); width: 100%; gap: 6px; padding-top: 0; }
+  .dock .vcard, .dock .vcard.wide { width: auto; height: 50px; font-size: 20px; }
+  .dock .final { padding: 10px 12px; gap: 10px; }
+  .dock .final .pick { width: 100%; gap: 8px; }
+  .dock .final .pick .muted { display: none; }
+  .dock .final .opt { min-width: 40px; height: 40px; }
+  .dock .final .actions { width: 100%; flex-wrap: nowrap; }
+  .dock .final .actions .btn { flex: 1; height: 44px; padding: 0 10px; }
+}

@@ -1,0 +1,20 @@
+/* Estimo — Dialogs (invite) and toasts. */
+
+/* dialog */
+.overlay { position: fixed; inset: 0; background: var(--overlay); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 20; }
+.dialog { width: 100%; max-width: 460px; max-height: 100%; overflow: auto; background: var(--surface); border-radius: 20px; padding: 28px; box-shadow: 0 24px 60px rgba(20,20,19,.25); display: flex; flex-direction: column; gap: 20px; }
+.dialog h2 { margin: 0; font-family: var(--serif); font-weight: 500; font-size: 28px; }
+.qr { align-self: center; padding: 18px; border-radius: 16px; background: #fff; border: 1px solid var(--border); position: relative; line-height: 0; }
+.qr svg { width: 232px; height: 232px; display: block; }
+.qr .mark { position: absolute; left: 50%; top: 50%; width: 36px; height: 36px; margin: -18px 0 0 -18px; border-radius: 8px; background: #fff; display: flex; align-items: center; justify-content: center; }
+.qr .mark i { width: 26px; height: 26px; border-radius: 6px; background: var(--accent); display: block; }
+.dialog.full { max-width: none; width: 100%; height: 100%; justify-content: center; align-items: center; text-align: center; border-radius: 0; }
+.dialog.full .qr svg { width: min(70vh, 80vw); height: min(70vh, 80vw); }
+.dialog.full .qr .mark { width: 12%; height: 12%; margin: -6% 0 0 -6%; }
+.dialog.full .qr .mark i { width: 70%; height: 70%; }
+.dialog.full .full-hide { display: none; }
+.dialog .full-only { display: none; }
+.dialog.full .full-only { display: block; font-family: var(--mono); font-size: clamp(18px, 3vw, 32px); }
+
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--btn); color: var(--btn-ink); padding: 10px 16px; border-radius: 10px; font-size: 14px; z-index: 30; box-shadow: 0 10px 30px var(--shadow); }
+.banner { background: var(--accent-soft); color: var(--accent-soft-ink); text-align: center; font-size: 14px; padding: 8px 16px; }

@@ -21,7 +21,8 @@ jobs:
           node --check src/worker.js
           node --check src/decks.js
           node --check scripts/local-server.mjs
-          node --check public/app.js
+          for f in $(find public/js -name '*.js'); do node --check "$f"; done
+          node --check public/sw.js
           node --check test/security.test.mjs
       - name: Smoke test (offline server)
         run: |

@@ -1,0 +1,33 @@
+/* Estimo — The plain default look, room codes in capitals, the Settings sheet, reduced motion. */
+
+/* ---- Plain, practical default look (light/dark). Fun themes keep their own styling. ---- */
+.join-label { margin-top: 20px; }
+.rc { font-weight: 500; }
+.sheet-code { font-weight: 600; }
+:is(:root:not([data-theme]), :root[data-theme="light"], :root[data-theme="dark"]) :is(.hero h1, .box h2, .dialog h2, .drawer-head h2, .gate h1, .logo b) { font-weight: 600; letter-spacing: -0.01em; }
+:is(:root:not([data-theme]), :root[data-theme="light"], :root[data-theme="dark"]) :is(.hero h1) { font-size: clamp(32px, 4.5vw, 44px); }
+:is(:root:not([data-theme]), :root[data-theme="light"], :root[data-theme="dark"]) :is(.hero .eyebrow, .fan) { display: none; }
+:is(:root:not([data-theme]), :root[data-theme="light"], :root[data-theme="dark"]) :is(.panel) { box-shadow: none; border: 1px solid var(--border); border-radius: 12px; }
+:is(:root:not([data-theme]), :root[data-theme="light"], :root[data-theme="dark"]) :is(.card) { border-radius: 12px; }
+:is(:root:not([data-theme]), :root[data-theme="light"], :root[data-theme="dark"]) :is(.topbar) { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
+:is(:root:not([data-theme]), :root[data-theme="light"], :root[data-theme="dark"]) :is(.tag, .plist .tag) { border-radius: 4px; padding: 0 5px; font-size: 11px; }
+:is(:root:not([data-theme]), :root[data-theme="light"], :root[data-theme="dark"]) :is(.chip, .me) { border-radius: 8px; }
+:is(:root:not([data-theme]), :root[data-theme="light"], :root[data-theme="dark"]) :is(.menu-btn .badge) { border-radius: 6px; }
+:is(:root:not([data-theme]), :root[data-theme="light"], :root[data-theme="dark"]) :is(.dialog:not(.full)) { border-radius: 14px; box-shadow: 0 12px 32px rgba(20, 20, 19, .18); }
+:is(:root:not([data-theme]), :root[data-theme="light"], :root[data-theme="dark"]) :is(.pcard, .vcard) { border-radius: 8px; }
+:is(:root:not([data-theme]), :root[data-theme="light"], :root[data-theme="dark"]) :is(.vcard[aria-pressed="true"]) { box-shadow: none; }
+@media (max-width: 640px) { .join-label { margin-top: 12px; } :is(:root:not([data-theme]), :root[data-theme="light"], :root[data-theme="dark"]) .dialog:not(.full) { border-radius: 14px 14px 0 0; } }
+
+/* Room codes read out loud: shown in capitals (stored lowercase, input is case-insensitive) */
+.code, .rc, .sheet-code, .notice-rooms a, .room-code { text-transform: uppercase; letter-spacing: .02em; }
+.rc .tag { text-transform: none; letter-spacing: 0; }
+/* Settings sheet (home) */
+.theme-list { display: flex; flex-direction: column; }
+.theme-list .label { margin: 4px 0 4px; }
+.theme-opt { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 0 4px; border: none; border-bottom: 1px solid var(--surface-2); background: none; color: var(--ink); font-size: 16px; text-align: left; }
+.theme-opt:last-child { border-bottom: none; }
+.theme-opt[aria-checked="true"] { font-weight: 600; }
+.theme-opt svg.i { color: var(--accent); }
+.room-sheet .set-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 16px; }
+
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

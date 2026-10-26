@@ -7,9 +7,12 @@
  *   and shows its "reconnecting" state instead of the browser's error page.
  * Realtime traffic (/ws/*) and the API (/api/*) are never touched.
  */
-const CACHE = "estimo-shell-v2";
+const CACHE = "estimo-shell-v4";
 const SHELL = [
-  "/", "/app.js", "/qr.js", "/manifest.webmanifest",
+  "/", "/qr.js", "/manifest.webmanifest",
+  // styles and app modules (keep in sync with public/css/ and public/js/)
+  "/css/01-tokens.css", "/css/02-base.css", "/css/03-home.css", "/css/04-room.css", "/css/05-dialogs.css", "/css/06-phone.css", "/css/07-motion.css", "/css/08-room-layout.css", "/css/09-default-look.css",
+  "/js/App.js", "/js/boot.js", "/js/domain/decks.js", "/js/domain/roomCode.js", "/js/domain/stats.js", "/js/lib/dom.js", "/js/lib/icons.js", "/js/lib/storage.js", "/js/main.js", "/js/services/InstallPrompt.js", "/js/services/RecentRooms.js", "/js/services/RoomConnection.js", "/js/services/ThemeManager.js", "/js/services/api.js", "/js/ui/TapFeedback.js", "/js/ui/csv.js", "/js/ui/qr.js", "/js/ui/toast.js", "/js/views/common.js", "/js/views/gate.js", "/js/views/home.js", "/js/views/invite.js", "/js/views/room.js", "/js/views/sheets.js", "/js/views/sidebar.js",
   "/icons/icon-192.png", "/icons/icon-512.png", "/icons/maskable-512.png", "/icons/apple-touch-icon.png",
 ];
 const NETWORK_TIMEOUT_MS = 3500;

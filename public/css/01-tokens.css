@@ -1,0 +1,38 @@
+/* Estimo — Design tokens: colours, fonts (light + dark). Fun themes override these in /themes/*.css. */
+
+:root {
+  /* Brand: Marigold — a warm amber, like a poker chip. Text on it is dark (--on-accent). */
+  --bg: #F7F7F5; --surface: #FFFFFF; --surface-2: #EFEEEB;
+  --border: #E4E3DF; --border-strong: #CFCDC8; --dash: #ADABA5;
+  --ink: #1A1917; --ink-2: #3A3936; --muted: #5F5D58;
+  --accent: #F5A524; --on-accent: #241600; --accent-ink: #9A5800; --accent-soft: #FDF1DC; --accent-soft-ink: #6E4000;
+  --btn: #1A1917; --btn-ink: #F7F7F5; --good: #3F7A3A; --bad: #B3402A;
+  --outlier: #4F7FAE; --outlier-bg: #EDF3F9; --outlier-ink: #2E5E8E;
+  --track: #E2E0DB; --bar-2: #F6D69F; --shadow: rgba(20,20,19,.06); --overlay: rgba(20,20,19,.42);
+  --serif: 'Hanken Grotesk', system-ui, 'Segoe UI', Roboto, sans-serif; /* one plain UI font; fun themes set their own */
+  --sans: 'Hanken Grotesk', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg: #1A1917; --surface: #23221F; --surface-2: #2D2C29;
+    --border: #3A3935; --border-strong: #4B4A45; --dash: #73716B;
+    --ink: #F2F1EE; --ink-2: #DCDAD5; --muted: #ADABA5;
+    --accent-ink: #F7B955; --accent-soft: #3F2C0D; --accent-soft-ink: #FAD9A0;
+    --btn: #F2F1EE; --btn-ink: #1A1917; --good: #8DBA75; --bad: #E58A74;
+    --outlier: #7FA9D4; --outlier-bg: #24313F; --outlier-ink: #A9C7E6;
+    --track: #3A3935; --bar-2: #7A5418; --shadow: rgba(0,0,0,.3); --overlay: rgba(0,0,0,.6);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1A1917; --surface: #23221F; --surface-2: #2D2C29;
+  --border: #3A3935; --border-strong: #4B4A45; --dash: #73716B;
+  --ink: #F2F1EE; --ink-2: #DCDAD5; --muted: #ADABA5;
+  --accent-ink: #F7B955; --accent-soft: #3F2C0D; --accent-soft-ink: #FAD9A0;
+  --btn: #F2F1EE; --btn-ink: #1A1917; --good: #8DBA75; --bad: #E58A74;
+  --outlier: #7FA9D4; --outlier-bg: #24313F; --outlier-ink: #A9C7E6;
+  --track: #3A3935; --bar-2: #7A5418; --shadow: rgba(0,0,0,.3); --overlay: rgba(0,0,0,.6);
+  color-scheme: dark;
+}

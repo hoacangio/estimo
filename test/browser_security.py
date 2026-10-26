@@ -55,7 +55,7 @@ with sync_playwright() as p:
 
     # CSV export
     with vic.expect_download() as dl:
-        vic.click("button[data-act=csv]")
+        vic.click("button[data-act=exportCsv]")
     text = open(dl.value.path(), encoding="utf-8-sig").read()
     rows = list(csv.reader(io.StringIO(text)))
     bad = [c for r in rows[1:] for c in r if c[:1] in ("=", "+", "-", "@", "\t", "\r")]

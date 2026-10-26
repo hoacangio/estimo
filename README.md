@@ -35,12 +35,32 @@ Browser ──HTTPS──▶ Static Assets (edge cache)      public/
 
 | Path | What it is |
 | --- | --- |
-| `src/worker.js` | Edge router + `Room` Durable Object (state, validation, per-socket broadcast) |
-| `HostRegistry` (in `src/worker.js`) | One Durable Object per host, counts the rooms a host owns |
+| `src/worker.js` | Edge router, REST API, `Room` Durable Object (state, validation, per-socket broadcast) and `HostRegistry` (rooms per host) |
 | `src/decks.js` | Single source of truth for voting scales — add a deck here and every client gets it |
-| `public/index.html` | The whole UI: vanilla JS, no build step |
+| `public/index.html` | Page shell: links the stylesheets and loads `js/main.js` (no build step) |
+| `public/css/01-…09-*.css` | Styles, in cascade order: tokens → base → screens → motion → layout → default look |
+| `public/themes/*.css` | Fun themes, downloaded only when chosen |
 | `public/qr.js` | Dependency-free QR encoder (byte mode, level M, versions 1–10) |
 | `scripts/local-server.mjs` | Offline dev server that runs the real `Room` class without wrangler or npm |
+
+### Client code (`public/js`, ES modules)
+
+```
+main.js                 entry: new App(#app).start()
+App.js                  App class: UI state, routing, server messages, render(), user actions
+lib/                    dom helpers (esc, oneShot…), icons, localStorage + identity
+domain/                 pure logic, no DOM: room codes, decks, vote statistics
+services/
+  RoomConnection.js     WebSocket with reconnect/backoff and heartbeat
+  api.js                REST calls (hosted rooms, delete room)
+  ThemeManager.js       light/dark + lazy fun themes, per-theme wording
+  RecentRooms.js        rooms visited on this device
+  InstallPrompt.js      PWA install prompt / iOS tip, service worker registration
+ui/                     toast, QR drawing/PNG, CSV export, tap feedback
+views/                  functions (app) => HTML: home, room, sidebar, sheets, invite, gate
+```
+
+How a user action flows: a view renders `data-act="vote"` → `App` looks up `actions.vote` → updates `app.ui` and/or sends a message through `RoomConnection` → the server's `state` message arrives → `App.render()` redraws with the views.
 
 ### REST API
 
@@ -111,7 +131,8 @@ node test/perf/load.mjs http://localhost:8787          # latency, fan-out, concu
 ## Extending
 
 - **New voting scale:** add an entry to `src/decks.js`.
-- **New action:** add a `case` in `Room.webSocketMessage` and a handler in `public/index.html`.
+- **New action:** add a `case` in `Room.webSocketMessage` (server), a button with `data-act="myAction"` in a view, and `myAction` in `App.actions` (client).
+- **New screen piece:** add a function in `public/js/views/` and call it from the screen's view.
 - **REST endpoints:** `/api/*` already routes to the Worker (`run_worker_first` in `wrangler.toml`).
 
 ## License
