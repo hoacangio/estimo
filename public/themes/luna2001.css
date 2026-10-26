@@ -1,0 +1,82 @@
+/* =====================================================================
+   Estimo — "Luna 2001" theme: the friendly blue-and-cream desktop look of the early 2000s.
+   Glossy blue title bars, cream windows, rounded buttons with an amber hover glow.
+   Inspired by the era in general; no logos or product names. Scoped under [data-theme="luna2001"].
+   ===================================================================== */
+
+:root[data-theme="luna2001"] {
+  --bg: #3a6fd8; --surface: #ece9d8; --surface-2: #f6f5ee;
+  --border: #c5c2b2; --border-strong: #7f9db9; --dash: #a5a28f;
+  --ink: #000000; --ink-2: #222222; --muted: #4d4d4d;
+  --accent: #2f71e6; --on-accent: #ffffff; --accent-ink: #0b4fc4; --accent-soft: #dbe8fb; --accent-soft-ink: #0b3f9a;
+  --btn: #ffffff; --btn-ink: #000000; --good: #2b8a2b; --bad: #c4291c;
+  --outlier: #c26b00; --outlier-bg: #fff3d6; --outlier-ink: #8a4c00;
+  --track: #ffffff; --bar-2: #8fb6f0; --shadow: rgba(0, 0, 40, .35); --overlay: rgba(0, 20, 60, .45);
+  --serif: "Trebuchet MS", Tahoma, Verdana, sans-serif;
+  --sans: Tahoma, Verdana, Geneva, sans-serif;
+  --l-title: linear-gradient(180deg, #0997ff 0%, #0053ee 9%, #0050ee 18%, #06f 46%, #0058ee 87%, #0047d6 100%);
+  --l-button: linear-gradient(180deg, #ffffff, #f0f0ea 60%, #d6d0c5);
+  --l-frame: #0054e3;
+  color-scheme: light;
+}
+
+/* soft blue desktop with a lighter horizon */
+[data-theme="luna2001"] body { background: linear-gradient(180deg, #2f62d0 0%, #5b8ff0 55%, #9cc3f7 100%) fixed; font-size: 14px; }
+[data-theme="luna2001"] a { color: #0b4fc4; }
+
+/* glossy title bars */
+[data-theme="luna2001"] .topbar,
+[data-theme="luna2001"] .home header { background: var(--l-title); color: #fff; border-bottom: 1px solid #0831d9; -webkit-backdrop-filter: none; backdrop-filter: none; }
+[data-theme="luna2001"] .logo, [data-theme="luna2001"] .topbar .code { color: #fff; text-shadow: 1px 1px 0 #0a246a; }
+[data-theme="luna2001"] .logo b { font-family: var(--serif); font-weight: 700; font-size: 20px; }
+[data-theme="luna2001"] .logo .back { stroke: #fff; }
+[data-theme="luna2001"] .logo .front { fill: #ffd84a; }
+[data-theme="luna2001"] .topbar .sep { background: rgba(255, 255, 255, .5); }
+
+/* windows: cream body inside a blue frame with rounded top corners */
+[data-theme="luna2001"] .card, [data-theme="luna2001"] .panel, [data-theme="luna2001"] .dialog {
+  background: var(--surface); border: 3px solid var(--l-frame); border-radius: 8px 8px 2px 2px; box-shadow: 0 6px 18px var(--shadow);
+}
+[data-theme="luna2001"] .box h2, [data-theme="luna2001"] .dialog h2, [data-theme="luna2001"] .drawer-head h2 {
+  font-family: var(--serif); font-size: 14px; font-weight: 700; color: #fff; background: var(--l-title);
+  margin: -14px -16px 8px; padding: 5px 10px; border-radius: 5px 5px 0 0; text-shadow: 1px 1px 0 #0a246a;
+}
+[data-theme="luna2001"] .dialog h2 { margin: -12px -16px 8px; font-size: 16px; }
+[data-theme="luna2001"] .drawer { background: linear-gradient(180deg, #7ba2e7, #6375d6); border-left: 1px solid #0831d9; }
+[data-theme="luna2001"] .hero h1 { color: #fff; text-shadow: 1px 2px 2px rgba(0, 0, 60, .5); font-family: var(--serif); font-weight: 700; }
+[data-theme="luna2001"] .hero p, [data-theme="luna2001"] .home footer { color: #eef4ff; }
+
+/* rounded buttons with an amber hover glow */
+[data-theme="luna2001"] .btn, [data-theme="luna2001"] .chip, [data-theme="luna2001"] .vcard,
+[data-theme="luna2001"] .final .opt, [data-theme="luna2001"] .me, [data-theme="luna2001"] select.select {
+  background: var(--l-button); color: #000; border: 1px solid #003c74; border-radius: 3px; font-family: var(--sans);
+}
+[data-theme="luna2001"] :is(.btn, .chip, .vcard, .final .opt, .me):hover:not(:disabled) { box-shadow: inset 0 0 0 2px #f8b636; }
+[data-theme="luna2001"] .btn-primary { background: linear-gradient(180deg, #5aa2ff, #1c62e0 55%, #1550c2); color: #fff; font-weight: 700; text-shadow: 0 1px 0 #0a246a; }
+[data-theme="luna2001"] .btn-accent { background: linear-gradient(180deg, #8de08d, #3c9d3c 55%, #2e7d2e); color: #fff; border-color: #1f5e1f; font-weight: 700; text-shadow: 0 1px 0 #1f4f1f; }
+[data-theme="luna2001"] .btn-danger { color: var(--bad); }
+[data-theme="luna2001"] .chip[aria-pressed="true"], [data-theme="luna2001"] .final .opt[aria-pressed="true"] { background: linear-gradient(180deg, #e3e1d6, #f5f4ee); box-shadow: inset 0 0 0 2px #2f71e6; font-weight: 700; color: #000; }
+[data-theme="luna2001"] .vcard { font-family: var(--serif); font-weight: 700; }
+[data-theme="luna2001"] .vcard[aria-pressed="true"] { background: linear-gradient(180deg, #5aa2ff, #1c62e0 55%, #1550c2); color: #fff; border-color: #0a246a; box-shadow: 0 6px 12px rgba(0, 40, 140, .4); }
+[data-theme="luna2001"] .vcard.meta { color: #4d4d4d; }
+
+/* inputs: white with a thin blue-grey border */
+[data-theme="luna2001"] .input, [data-theme="luna2001"] .topic input { background: #fff; border: 1px solid #7f9db9; border-radius: 0; padding-left: 8px; }
+
+/* table and cards */
+[data-theme="luna2001"] .table { background: #fff; border: 1px solid #7f9db9; border-radius: 0; }
+[data-theme="luna2001"] .pcard { font-family: var(--serif); font-weight: 700; border-radius: 4px; }
+[data-theme="luna2001"] .pcard.down { background: linear-gradient(160deg, #5aa2ff, #1c62e0 50%, #0a3fae); border: 2px solid #fff; box-shadow: 0 0 0 1px #0a246a, 0 3px 6px rgba(0, 0, 60, .3); }
+[data-theme="luna2001"] .pcard.up { background: #fff; border: 1px solid #003c74; color: #000; }
+
+/* segmented green progress bar */
+[data-theme="luna2001"] .progress { height: 14px; border-radius: 3px; background: #fff; border: 1px solid #7f9db9; padding: 1px; }
+[data-theme="luna2001"] .progress div { border-radius: 1px; background: repeating-linear-gradient(90deg, #37c837 0 7px, transparent 7px 9px); }
+[data-theme="luna2001"] .dist .bar { background: #fff; border: 1px solid #7f9db9; border-radius: 0; }
+[data-theme="luna2001"] .dist .bar div { border-radius: 0; background: #8fb6f0; }
+[data-theme="luna2001"] .dist .bar div.top { background: #2f71e6; }
+[data-theme="luna2001"] .toast { background: #ffffe1; color: #000; border: 1px solid #000; border-radius: 6px; }
+[data-theme="luna2001"] .banner { background: #ffffe1; color: #000; }
+
+/* title bars span the whole window width */
+[data-theme="luna2001"] .box-head h2 { flex: 1; }

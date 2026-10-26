@@ -1,0 +1,89 @@
+/* =====================================================================
+   Estimo — "Classic 2000" theme: the grey, bevelled desktop look of around 2000.
+   Teal desktop, navy title bars, raised buttons that sink when pressed.
+   Inspired by the era in general; no logos or product names. Scoped under [data-theme="classic2000"].
+   ===================================================================== */
+
+:root[data-theme="classic2000"] {
+  --bg: #3a6ea5; --surface: #d4d0c8; --surface-2: #c4c0b8;
+  --border: #808080; --border-strong: #404040; --dash: #808080;
+  --ink: #000000; --ink-2: #1a1a1a; --muted: #404040;
+  --accent: #0a246a; --on-accent: #ffffff; --accent-ink: #0a246a; --accent-soft: #c8d4ec; --accent-soft-ink: #0a246a;
+  --btn: #d4d0c8; --btn-ink: #000000; --good: #006400; --bad: #a00000;
+  --outlier: #800080; --outlier-bg: #f0e0f0; --outlier-ink: #600060;
+  --track: #ffffff; --bar-2: #6a7fb0; --shadow: rgba(0, 0, 0, .35); --overlay: rgba(0, 0, 0, .35);
+  --serif: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  --sans: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  --c-raised: inset -1px -1px #404040, inset 1px 1px #ffffff, inset -2px -2px #808080, inset 2px 2px #dfdfdf;
+  --c-sunken: inset 1px 1px #404040, inset -1px -1px #ffffff, inset 2px 2px #808080, inset -2px -2px #dfdfdf;
+  --c-title: linear-gradient(90deg, #0a246a, #a6caf0);
+  color-scheme: light;
+}
+
+[data-theme="classic2000"] body { background: #3a6ea5; font-size: 14px; -webkit-font-smoothing: auto; }
+[data-theme="classic2000"] a { color: #0000ee; }
+[data-theme="classic2000"] :focus-visible { outline: 1px dotted #000; outline-offset: -4px; }
+
+/* title bars */
+[data-theme="classic2000"] .topbar,
+[data-theme="classic2000"] .home header { background: var(--c-title); color: #fff; border-bottom: 2px solid #d4d0c8; -webkit-backdrop-filter: none; backdrop-filter: none; }
+[data-theme="classic2000"] .logo, [data-theme="classic2000"] .topbar .code { color: #fff; }
+[data-theme="classic2000"] .logo b { font-weight: 700; font-size: 18px; }
+[data-theme="classic2000"] .logo .back { stroke: #fff; }
+[data-theme="classic2000"] .logo .front { fill: #d4d0c8; }
+[data-theme="classic2000"] .topbar .sep { background: rgba(255, 255, 255, .5); }
+
+/* windows: grey with a raised 3D frame, square corners */
+[data-theme="classic2000"] .card, [data-theme="classic2000"] .panel, [data-theme="classic2000"] .dialog {
+  background: var(--surface); border: none; border-radius: 0; box-shadow: var(--c-raised); padding-top: 2px;
+}
+[data-theme="classic2000"] .panel { padding: 22px; }
+[data-theme="classic2000"] .box h2, [data-theme="classic2000"] .dialog h2, [data-theme="classic2000"] .drawer-head h2 {
+  font-size: 13px; font-weight: 700; color: #fff; background: var(--c-title); padding: 3px 6px; margin: -2px -4px 6px;
+}
+[data-theme="classic2000"] .box-head { margin: 0; }
+[data-theme="classic2000"] .box-head .muted { color: var(--muted); }
+[data-theme="classic2000"] .drawer { background: #c0c0c0; border-left: 2px solid #ffffff; }
+[data-theme="classic2000"] .hero h1 { color: #fff; font-weight: 700; text-shadow: 1px 1px 0 #000; }
+[data-theme="classic2000"] .hero p, [data-theme="classic2000"] .home footer { color: #e6eef8; }
+
+/* buttons: raised, sink when pressed */
+[data-theme="classic2000"] .btn, [data-theme="classic2000"] .chip, [data-theme="classic2000"] .vcard,
+[data-theme="classic2000"] .final .opt, [data-theme="classic2000"] .me, [data-theme="classic2000"] select.select {
+  background: var(--surface); color: #000; border: none; border-radius: 0; box-shadow: var(--c-raised); font-family: var(--sans);
+}
+[data-theme="classic2000"] .btn-primary { font-weight: 700; box-shadow: 0 0 0 1px #000, var(--c-raised); }
+[data-theme="classic2000"] .btn-accent { background: var(--surface); color: #000; }
+[data-theme="classic2000"] .btn-danger { color: var(--bad); }
+[data-theme="classic2000"] :is(.btn, .chip, .vcard, .final .opt, .me):active:not(:disabled) { box-shadow: var(--c-sunken); transform: translate(1px, 1px) !important; filter: none !important; }
+[data-theme="classic2000"] .tapped { animation: none !important; }
+[data-theme="classic2000"] button:disabled { color: #808080; text-shadow: 1px 1px 0 #fff; opacity: 1; }
+[data-theme="classic2000"] .chip[aria-pressed="true"], [data-theme="classic2000"] .final .opt[aria-pressed="true"] { box-shadow: var(--c-sunken); background: #e8e6e0; font-weight: 700; color: #000; }
+[data-theme="classic2000"] .vcard[aria-pressed="true"] { background: var(--accent); color: #fff; box-shadow: var(--c-sunken); transform: none; }
+[data-theme="classic2000"] .vcard:hover:not(:disabled) { transform: none; }
+[data-theme="classic2000"] .vcard.meta { color: #404040; }
+
+/* inputs are sunken white fields */
+[data-theme="classic2000"] .input, [data-theme="classic2000"] .topic input { background: #fff; border: none; border-radius: 0; box-shadow: var(--c-sunken); padding-left: 8px; }
+[data-theme="classic2000"] .topic input:focus { box-shadow: var(--c-sunken); }
+
+/* the table is a sunken well; face-down cards are navy with a dither pattern */
+[data-theme="classic2000"] .table { background: #ffffff; border-radius: 0; box-shadow: var(--c-sunken); }
+[data-theme="classic2000"] .pcard { border-radius: 0; font-family: var(--sans); font-weight: 700; }
+[data-theme="classic2000"] .pcard.empty { border: 1px dotted #808080; }
+[data-theme="classic2000"] .pcard.down { background: repeating-conic-gradient(#0a246a 0 25%, #3a5a9a 0 50%) 0 0 / 4px 4px; border: none; box-shadow: var(--c-raised); }
+[data-theme="classic2000"] .pcard.up { background: #fff; border: none; box-shadow: var(--c-raised); color: #000; }
+
+/* progress bar: navy blocks */
+[data-theme="classic2000"] .progress { height: 16px; border-radius: 0; background: #fff; box-shadow: var(--c-sunken); padding: 2px; }
+[data-theme="classic2000"] .progress div { background: repeating-linear-gradient(90deg, #0a246a 0 8px, transparent 8px 10px); }
+[data-theme="classic2000"] .dist .bar { border-radius: 0; background: #fff; box-shadow: var(--c-sunken); }
+[data-theme="classic2000"] .dist .bar div { border-radius: 0; background: #6a7fb0; }
+[data-theme="classic2000"] .dist .bar div.top { background: #0a246a; }
+[data-theme="classic2000"] .tag { border-radius: 0; border-color: #808080; }
+[data-theme="classic2000"] .toast { background: #ffffe1; color: #000; border: 1px solid #000; border-radius: 0; }
+[data-theme="classic2000"] .banner { background: #ffffe1; color: #000; }
+[data-theme="classic2000"] .sheet-handle { display: none !important; }
+
+/* title bars span the whole window width */
+[data-theme="classic2000"] .box-head h2 { flex: 1; }

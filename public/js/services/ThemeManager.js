@@ -17,6 +17,10 @@ export const FUN_THEMES = {
                hello: "道 — The way of the estimate" },
   mission:   { label: "Mission Control", dark: true, font: "family=Orbitron:wght@500;700&family=Share+Tech+Mono",
                hello: "All systems go. Mission control online." },
+  classic2000: { label: "Classic 2000", dark: false,
+               hello: "Your settings have been saved. Click OK to continue." },
+  luna2001:  { label: "Luna 2001", dark: false,
+               hello: "Welcome! A tour of your new desktop starts now." },
   // Seasonal themes: also switch on by themselves on their dates (domain/seasons.js)
   womensday: { label: "Women's Day (8/3)", dark: false, seasonal: true,
                hello: "Happy International Women's Day! 🌷", banner: "🌷 Happy International Women's Day — 8/3" },
