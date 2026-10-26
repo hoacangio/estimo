@@ -342,6 +342,10 @@ button, .btn, .chip, .vcard, .opt { touch-action: manipulation; -webkit-user-sel
 .logo { display: inline-flex; transform-origin: left center; }
 :root:not([data-theme="retro2007"]) .vcard:active:not(:disabled) { transform: translateY(2px) scale(.93); transition-duration: .06s; }
 :root:not([data-theme="retro2007"]) .vcard[aria-pressed="true"]:active:not(:disabled) { transform: translateY(-10px) scale(.95); }
+:root:not([data-theme="retro2007"]) .vcard.pop { animation: card-pop .32s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes card-pop { from { transform: translateY(2px) scale(.9); } }
+:root:not([data-theme="retro2007"]) .tapped:not(.vcard) { animation: tap-release .26s cubic-bezier(.3, 1.5, .5, 1); }
+@keyframes tap-release { from { transform: scale(.94); filter: brightness(.9); } }
 
 /* ---- App-like motion (all themes except Retro 2007) ---- */
 /* Screen changes cross-fade and slide (View Transitions API; skipped where unsupported) */

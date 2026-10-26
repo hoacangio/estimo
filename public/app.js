@@ -158,7 +158,10 @@ function parseRoute() {
 // Big UI changes (screens, dialogs, themes) animate with the View Transitions API.
 // Realtime updates never do: they must stay instant.
 const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
-function withTransition(update) { update(); } // screen changes are instant (no slide/fade)
+function withTransition(update) {
+  if (!document.startViewTransition || reducedMotion() || isRetro()) return update();
+  document.startViewTransition(update);
+}
 function go(path) { history.pushState(null, "", path); withTransition(onRoute); }
 function onRoute() {
   parseRoute();
@@ -408,6 +411,7 @@ function render() {
   const bar = app.querySelector(".progress [data-to]");
   if (bar && bar.style.width !== bar.dataset.to + "%") { void bar.offsetWidth; bar.style.width = bar.dataset.to + "%"; }
 
+  replayTap();
   if (keep) { const el = document.getElementById(keep.id); if (el) { if (el.tagName === "INPUT" && !el.readOnly && keep.value != null) el.value = keep.value; el.focus(); try { if (keep.start != null) el.setSelectionRange(keep.start, keep.end); } catch {} } }
   document.title = ui.route === "room" ? `${String(ui.room).toUpperCase()} · Estimo` : "Estimo — planning poker";
 }
@@ -1002,6 +1006,24 @@ window.addEventListener("online", () => { if (ui.route === "room" && me.name && 
 window.addEventListener("offline", () => render());
 // iOS Safari only applies :active styles when a touch listener exists
 document.addEventListener("touchstart", () => {}, { passive: true });
+// Tap feedback that survives re-renders: a quick tap re-renders the screen before the
+// :active press is visible, so the matching new control replays a short press-release.
+document.addEventListener("pointerdown", (e) => {
+  if (isRetro() || reducedMotion()) return;
+  const el = e.target.closest("button, a.btn, .recent a, .logo");
+  if (!el || el.disabled) return;
+  const attrs = ["data-act", "data-v", "data-code", "data-deck", "data-theme", "data-dir", "data-nav", "id"];
+  const sel = el.tagName.toLowerCase() + attrs.filter((a) => el.hasAttribute(a)).map((a) => `[${a}="${CSS.escape(el.getAttribute(a))}"]`).join("");
+  ui.tap = { sel, at: performance.now() };
+}, { capture: true, passive: true });
+function replayTap() {
+  const t = ui.tap; if (!t) return;
+  const now = performance.now();
+  if (now - t.at > 700 || (t.start && now - t.start > 260)) { ui.tap = null; return; }
+  const el = app.querySelector(t.sel); if (!el) return;
+  t.start ??= now; // later renders continue the same animation instead of restarting it
+  el.classList.add("tapped"); el.style.animationDelay = `${-Math.round(now - t.start)}ms`;
+}
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && ui.route === "room" && me.name && (!ws || ws.readyState > 1)) { retry = 0; connect(); } });
 
 /* ---------------- PWA: offline shell + install ---------------- */
