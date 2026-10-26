@@ -88,7 +88,9 @@ function topicBar(app, state) {
 
 function table(app, state) {
   const people = voters(state);
-  const seats = people.length ? `<div class="seats">${people.map((p) => seat(app, state, p)).join("")}</div>` : "";
+  // Cards are big by default and get smaller as more people sit at the table (see 08-room-layout.css)
+  const size = people.length > 14 ? " crowd" : people.length > 8 ? " many" : "";
+  const seats = people.length ? `<div class="seats${size}">${people.map((p) => seat(app, state, p)).join("")}</div>` : "";
   return `<section class="table" aria-label="Table">${seats}${tableStatus(app, state, people)}</section>`;
 }
 
