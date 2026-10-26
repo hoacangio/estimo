@@ -12,7 +12,7 @@ function loadFont(href) {
   l.rel = "stylesheet"; l.href = href; l.dataset.font = href;
   document.head.appendChild(l);
 }
-loadFont("https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap");
+loadFont("https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap");
 
 const LS = {
   get(k, d) { try { const v = localStorage.getItem("estimo." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
@@ -365,7 +365,14 @@ function fitHome() {
   ui.fitKey = key; ui.recentPer = null; ui.homeTight = false;
   if (!mobile) { app.innerHTML = viewHome(); return; }
   const start = ui.recentStart; ui.recentStart = 0;
-  const over = () => document.scrollingElement.scrollHeight > innerHeight;
+  // Measure the content itself: on Android Chrome the page box is sized to the viewport
+  // without the URL bar (100vh), so the document height overstates what is needed.
+  const over = () => {
+    const main = app.querySelector(".home main"), wrap = main?.querySelector(".wrap");
+    if (!wrap) return false;
+    const need = wrap.getBoundingClientRect().bottom + scrollY + parseFloat(getComputedStyle(main).paddingBottom || 0);
+    return need > (window.visualViewport?.height || innerHeight) + 0.5;
+  };
   app.innerHTML = viewHome();
   for (let per = 4; over() && per >= 1; per--) { ui.recentPer = per; app.innerHTML = viewHome(); }
   if (over()) ui.homeTight = true;
@@ -458,14 +465,14 @@ function viewHome() {
             </div>
             <button class="btn btn-primary btn-lg create-btn" type="submit" ${ui.limitInfo ? 'disabled aria-describedby="limit-note"' : ""}>${ui.limitInfo ? `Room limit reached (${ui.limitInfo.max})` : T("Create a new room", "Tạo phòng ngay »")}</button>
           </form>
-          <div class="divider">or join an existing one</div>
+          <label class="label join-label" for="code">Join a room</label>
           <form id="join-form" class="join-row">
-            <label class="sr-only" for="code">Room code</label>
+            
             <input class="input" id="code" value="${esc(ui.draftCode ?? "")}" placeholder="e.g. calm-otter-42" autocapitalize="off" autocomplete="off" spellcheck="false">
             <button class="btn" type="submit" style="height:48px;border-color:var(--ink)">${T("Join", "Vào!")}</button>
           </form>
           ${ui.limitInfo ? `<div class="notice" id="limit-note" role="status"><strong>You host ${ui.limitInfo.max} of ${ui.limitInfo.max} rooms.</strong> Delete one to create a new room${ui.limitInfo.rooms.every((c) => recent.some((r) => r.code === c)) ? " (trash icon in Recent rooms)." : ":"}
-            <div class="notice-rooms">${ui.limitInfo.rooms.filter((c) => !recent.some((r) => r.code === c)).map((c) => `<span class="nr"><a class="mono" href="/r/${esc(c)}" data-nav="/r/${esc(c)}">${esc(c)}</a><button type="button" class="nr-del" data-act="roomSheet" data-code="${esc(c)}" data-host="1" aria-label="Delete ${esc(c)}">${icon("trash")}</button></span>`).join("")}</div></div>` : ""}
+            <div class="notice-rooms">${ui.limitInfo.rooms.filter((c) => !recent.some((r) => r.code === c)).map((c) => `<span class="nr"><a href="/r/${esc(c)}" data-nav="/r/${esc(c)}">${esc(c)}</a><button type="button" class="nr-del" data-act="roomSheet" data-code="${esc(c)}" data-host="1" aria-label="Delete ${esc(c)}">${icon("trash")}</button></span>`).join("")}</div></div>` : ""}
           ${ui.joinError ? `<div class="hint" style="color:var(--bad)">${esc(ui.joinError)}</div>` : ""}
           ${viewInstall()}
           ${recent.length ? `
@@ -474,7 +481,7 @@ function viewHome() {
               <button type="button" class="btn btn-icon btn-sm" data-act="recentPage" data-dir="-1" aria-label="Previous page" ${page === 0 ? "disabled" : ""}>‹</button>
               <span class="muted">${page + 1}/${pages}</span>
               <button type="button" class="btn btn-icon btn-sm" data-act="recentPage" data-dir="1" aria-label="Next page" ${page === pages - 1 ? "disabled" : ""}>›</button></div>` : ""}</div>
-            ${recent.slice(page * RECENT_PAGE, page * RECENT_PAGE + RECENT_PAGE).map((r) => `<div class="recent-row"><a href="/r/${esc(r.code)}" data-nav="/r/${esc(r.code)}"><span class="mono">${esc(r.code)}${r.host ? ' <span class="tag">Host</span>' : ""}</span><span class="muted" style="font-size:13px">${esc(ago(r.at))}${r.deck ? " · " + esc(deckLabel(r.deck)) : ""}</span></a><button type="button" class="btn btn-icon btn-sm row-act" data-act="roomSheet" data-code="${esc(r.code)}" aria-label="${r.host ? "Delete" : "Remove"} ${esc(r.code)}">${icon(r.host ? "trash" : "x")}</button></div>`).join("")}
+            ${recent.slice(page * RECENT_PAGE, page * RECENT_PAGE + RECENT_PAGE).map((r) => `<div class="recent-row"><a href="/r/${esc(r.code)}" data-nav="/r/${esc(r.code)}"><span class="rc">${esc(r.code)}${r.host ? ' <span class="tag">Host</span>' : ""}</span><span class="muted" style="font-size:13px">${esc(ago(r.at))}${r.deck ? " · " + esc(deckLabel(r.deck)) : ""}</span></a><button type="button" class="btn btn-icon btn-sm row-act" data-act="roomSheet" data-code="${esc(r.code)}" aria-label="${r.host ? "Delete" : "Remove"} ${esc(r.code)}">${icon(r.host ? "trash" : "x")}</button></div>`).join("")}
           </div>` : ""}
         </section>
       </div>
@@ -491,7 +498,7 @@ function viewRoomSheet() {
     <div class="dialog room-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" data-stop>
       <span class="sheet-handle" aria-hidden="true"></span>
       <h2 id="sheet-title">${host ? "Delete room?" : "Remove from recent rooms?"}</h2>
-      <p class="mono sheet-code">${esc(code)}</p>
+      <p class="sheet-code">${esc(code)}</p>
       <p class="muted">${host ? "The room and its ticket history are deleted for everyone in it. This can’t be undone." : "Only removes it from this device. The room itself is not deleted."}</p>
       ${error ? `<p class="sheet-error" role="alert">${esc(error)}</p>` : ""}
       <div class="sheet-actions">
@@ -555,7 +562,7 @@ function viewRoomError() {
     ? "Check the room code or ask the host for a new link."
     : "Create a new room from the home page.";
   return `<div class="gate"><div class="inner"><a class="logo" href="/" data-nav="/">${LOGO}<b>Estimo</b></a>
-    <p class="mono muted" style="margin:56px 0 0">${esc(e.room)}</p>
+    <p class="muted" style="margin:56px 0 0">${esc(e.room)}</p>
     <h1 style="font-family:var(--serif);font-weight:500;margin:8px 0 12px">${title}</h1>
     <p class="muted" style="margin:0 0 28px">${hint}</p>
     <a class="btn btn-primary btn-lg" href="/" data-nav="/">Go to home</a></div></div>`;
@@ -598,7 +605,6 @@ function viewRoom() {
       <a class="logo" href="/" data-nav="/" aria-label="Estimo home">${LOGO}<b class="hide-sm">Estimo</b></a>
       <span class="sep hide-sm"></span>
       <span class="code">${esc(ui.room)}</span>
-      <span id="live" class="live ${ui.connected ? "" : "off"}" title="${esc(liveText())}"><span class="live-text">${liveText()}</span></span>
     </div>
     <div class="right">
       <button class="btn btn-accent btn-sm" data-act="invite" aria-label="Invite">${icon("qr")}<span class="label-wide">${T("Invite", "Mời bạn bè!")}</span></button>
@@ -798,8 +804,8 @@ function viewInvite() {
       <div class="full-only">${esc(roomUrl().replace(/^https?:\/\//, ""))}</div>
       <div class="full-hide">
         <label class="label" for="link" style="font-size:13px">Room link</label>
-        <div class="join-row"><input class="input mono" id="link" readonly value="${esc(roomUrl())}" style="height:44px;font-size:13px;background:var(--bg)"><button class="btn btn-primary" data-act="copy" style="height:44px">Copy</button></div>
-        <div class="hint">Or enter code <strong class="mono" style="font-weight:500;color:var(--ink)">${esc(ui.room)}</strong> on the home page.</div>
+        <div class="join-row"><input class="input" id="link" readonly value="${esc(roomUrl())}" style="height:44px;font-size:13px;background:var(--bg)"><button class="btn btn-primary" data-act="copy" style="height:44px">Copy</button></div>
+        <div class="hint">Or enter code <strong style="font-weight:600;color:var(--ink)">${esc(ui.room)}</strong> on the home page.</div>
       </div>
       <div class="actions full-hide" style="border-top:1px solid var(--surface-2);padding-top:18px">
         <button class="btn" data-act="fullInvite" style="flex:1 1 160px">${icon("expand")}Show full screen</button>
