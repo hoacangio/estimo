@@ -356,14 +356,23 @@ const fmt = (n) => (n == null ? "—" : Number.isInteger(n) ? String(n) : n.toFi
 const app = $("#app");
 // Phones: keep the home screen to one screen. Show fewer recent rooms per page first,
 // then shorten the install tip, until nothing scrolls.
+// Rows per page are measured once per layout (screen size, theme, limit notice, install tip)
+// on a FULL first page, so every page has the same size and the pager never jumps.
 function fitHome() {
-  if (!matchMedia("(max-width: 640px)").matches) return;
+  const mobile = matchMedia("(max-width: 640px)").matches;
+  const key = mobile && [innerWidth, innerHeight, currentTheme(), isDark(), JSON.stringify(ui.limitInfo), LS.get("recentRooms", []).length, !!app.querySelector(".install")].join("|");
+  if (ui.fitKey === key) return;
+  ui.fitKey = key; ui.recentPer = null; ui.homeTight = false;
+  if (!mobile) { app.innerHTML = viewHome(); return; }
+  const start = ui.recentStart; ui.recentStart = 0;
   const over = () => document.scrollingElement.scrollHeight > innerHeight;
+  app.innerHTML = viewHome();
   for (let per = 4; over() && per >= 1; per--) { ui.recentPer = per; app.innerHTML = viewHome(); }
-  if (over()) app.querySelector(".home")?.classList.add("tight");
+  if (over()) ui.homeTight = true;
+  ui.recentStart = start; app.innerHTML = viewHome();
 }
 let fitTimer;
-function refitHome() { if (ui.route !== "home") return; clearTimeout(fitTimer); fitTimer = setTimeout(render, 120); }
+function refitHome() { if (ui.route !== "home") return; ui.fitKey = null; clearTimeout(fitTimer); fitTimer = setTimeout(render, 120); }
 addEventListener("resize", refitHome);
 document.fonts?.addEventListener?.("loadingdone", refitHome);
 function render() {
@@ -377,7 +386,7 @@ function render() {
   // re-rendered bar continues from there instead of jumping.
   const oldBar = app.querySelector(".progress [data-to]");
   ui.lastPct = oldBar ? (oldBar.getBoundingClientRect().width / oldBar.parentElement.getBoundingClientRect().width) * 100 : undefined;
-  if (ui.route === "home") { ui.recentPer = null; app.innerHTML = viewHome(); fitHome(); }
+  if (ui.route === "home") { app.innerHTML = viewHome(); fitHome(); }
   else if (!validCode(ui.room)) app.innerHTML = viewBadRoom();
   else if (ui.roomError) app.innerHTML = viewRoomError();
   else if (!me.name) app.innerHTML = viewGate();
@@ -414,10 +423,14 @@ function viewHome() {
   const recent = LS.get("recentRooms", []);
   const RECENT_PAGE = ui.recentPer || 5; // fitHome() lowers this on short phones
   const pages = Math.max(1, Math.ceil(recent.length / RECENT_PAGE));
-  const page = ui.recentPage = Math.min(Math.max(0, ui.recentPage || 0), pages - 1);
+  // The position is kept as the index of the first room shown, not a page number, because
+  // fitHome() may change rows per page between renders (a page number would then drift).
+  const start = Math.min(Math.max(0, ui.recentStart || 0), Math.max(0, recent.length - 1));
+  const page = Math.floor(start / RECENT_PAGE);
+  ui.recentShown = RECENT_PAGE;
   const deck = HOME_DECKS.find((d) => d[0] === ui.homeDeck) || HOME_DECKS[2];
   return `
-  <div class="home">
+  <div class="home${ui.homeTight ? " tight" : ""}">
     <header>
       <a class="logo" href="/" data-nav="/">${LOGO}<b>Estimo</b></a>
       ${themeBtn()}
@@ -451,8 +464,8 @@ function viewHome() {
             <input class="input" id="code" value="${esc(ui.draftCode ?? "")}" placeholder="e.g. calm-otter-42" autocapitalize="off" autocomplete="off" spellcheck="false">
             <button class="btn" type="submit" style="height:48px;border-color:var(--ink)">${T("Join", "Vào!")}</button>
           </form>
-          ${ui.limitInfo ? `<div class="notice" id="limit-note" role="status"><strong>You host ${ui.limitInfo.max} of ${ui.limitInfo.max} rooms.</strong> Delete one to create a new room:
-            <div class="notice-rooms">${ui.limitInfo.rooms.map((c) => `<span class="nr"><a class="mono" href="/r/${esc(c)}" data-nav="/r/${esc(c)}">${esc(c)}</a><button type="button" class="nr-del" data-act="roomSheet" data-code="${esc(c)}" data-host="1" aria-label="Delete ${esc(c)}">${icon("trash")}</button></span>`).join("")}</div></div>` : ""}
+          ${ui.limitInfo ? `<div class="notice" id="limit-note" role="status"><strong>You host ${ui.limitInfo.max} of ${ui.limitInfo.max} rooms.</strong> Delete one to create a new room${ui.limitInfo.rooms.every((c) => recent.some((r) => r.code === c)) ? " (trash icon in Recent rooms)." : ":"}
+            <div class="notice-rooms">${ui.limitInfo.rooms.filter((c) => !recent.some((r) => r.code === c)).map((c) => `<span class="nr"><a class="mono" href="/r/${esc(c)}" data-nav="/r/${esc(c)}">${esc(c)}</a><button type="button" class="nr-del" data-act="roomSheet" data-code="${esc(c)}" data-host="1" aria-label="Delete ${esc(c)}">${icon("trash")}</button></span>`).join("")}</div></div>` : ""}
           ${ui.joinError ? `<div class="hint" style="color:var(--bad)">${esc(ui.joinError)}</div>` : ""}
           ${viewInstall()}
           ${recent.length ? `
@@ -877,7 +890,12 @@ document.addEventListener("click", (e) => {
     case "roomSheet": openRoomSheet(el.dataset.code, el.dataset.host === "1"); break;
     case "closeSheet": closeSheet(); break;
     case "confirmSheet": confirmSheet(); break;
-    case "recentPage": ui.recentPage = (ui.recentPage || 0) + Number(el.dataset.dir); render(); break;
+    case "recentPage": {
+      const per = ui.recentShown || 5, n = LS.get("recentRooms", []).length;
+      const page = Math.floor(Math.min(ui.recentStart || 0, Math.max(0, n - 1)) / per) + Number(el.dataset.dir);
+      ui.recentStart = Math.min(Math.max(0, page * per), Math.max(0, n - 1));
+      render(); break;
+    }
     case "toggleDrawer": ui.drawerOpen && !ui.drawerLeaveAt ? closeDrawer() : openDrawer(); break;
     case "closeDrawer": closeDrawer(); break;
     case "invite": ui.showInvite = true; ui.fullInvite = false; ui.inviteAt = performance.now(); render(); break;
