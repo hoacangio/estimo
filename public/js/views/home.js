@@ -3,7 +3,7 @@ import { esc } from "../lib/dom.js";
 import { icon } from "../lib/icons.js";
 import { me } from "../lib/storage.js";
 import { HOME_DECKS, deckLabel } from "../domain/decks.js";
-import { logoLink, darkModeButton, retroTicker, retroFooter } from "./common.js";
+import { logoLink, darkModeButton, retroTicker, retroFooter, seasonStrip } from "./common.js";
 import { sheetView } from "./sheets.js";
 
 export function homeView(app) {
@@ -16,7 +16,7 @@ export function homeView(app) {
       ${logoLink()}
       <span class="theme-btns">${darkModeButton(app)}<button class="btn btn-icon" data-act="openSettings" aria-label="Settings">${icon("gear")}</button></span>
     </header>
-    ${retroTicker(app)}
+    ${seasonStrip(app)}${retroTicker(app)}
     <main>
       <div class="wrap">
         <section class="hero">

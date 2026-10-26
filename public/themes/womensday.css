@@ -1,0 +1,42 @@
+/* =====================================================================
+   Estimo — "Women's Day" seasonal theme (8/3): soft rose, fresh green, tulips.
+   Switches on automatically 7–8 March. Every rule is scoped under [data-theme="womensday"].
+   ===================================================================== */
+
+:root[data-theme="womensday"] {
+  --bg: #fff6f8; --surface: #ffffff; --surface-2: #fde9ef;
+  --border: #f6d6e0; --border-strong: #e9b6c7; --dash: #d18ea6;
+  --ink: #2b1520; --ink-2: #4a2a3a; --muted: #7a5365;
+  --accent: #d63f78; --on-accent: #ffffff; --accent-ink: #b02a5f; --accent-soft: #fde1ec; --accent-soft-ink: #8a1f4a;
+  --btn: #2b1520; --btn-ink: #fff6f8; --good: #3f7a4a; --bad: #b3402a;
+  --outlier: #7b61c9; --outlier-bg: #f0ebff; --outlier-ink: #5440a0;
+  --track: #f6d6e0; --bar-2: #f3a9c4; --shadow: rgba(120, 30, 70, .08);
+  --w-leaf: #4f9a5c;
+  color-scheme: light;
+}
+
+/* soft petals in the background */
+[data-theme="womensday"] body {
+  background:
+    radial-gradient(ellipse 14px 22px at 8% 18%, rgba(214, 63, 120, .16), transparent 70%),
+    radial-gradient(ellipse 12px 20px at 11% 15%, rgba(214, 63, 120, .12), transparent 70%),
+    radial-gradient(ellipse 16px 24px at 90% 84%, rgba(214, 63, 120, .14), transparent 70%),
+    radial-gradient(ellipse 6px 22px at 91% 92%, rgba(79, 154, 92, .18), transparent 70%),
+    #fff6f8;
+  background-attachment: fixed;
+}
+[data-theme="womensday"] .topbar,
+[data-theme="womensday"] .home header { border-bottom: 3px solid var(--accent); }
+[data-theme="womensday"] .logo .front { fill: var(--accent); }
+
+/* face-down cards: a tulip on rose */
+[data-theme="womensday"] .pcard.down {
+  background:
+    radial-gradient(ellipse 9px 11px at 50% 40%, #fff 0 60%, transparent 62%),
+    linear-gradient(var(--w-leaf), var(--w-leaf)) 50% 78% / 2px 14px no-repeat,
+    var(--accent);
+  border: 3px solid var(--surface); box-shadow: 0 0 0 2px var(--accent);
+}
+[data-theme="womensday"] .progress div { background: linear-gradient(90deg, #f3a9c4, var(--accent)); }
+
+[data-theme="womensday"] .season-strip { background: linear-gradient(90deg, #fde1ec, #fbd0e0); color: #8a1f4a; }

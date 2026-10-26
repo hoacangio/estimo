@@ -1,0 +1,40 @@
+/* =====================================================================
+   Estimo — "Halloween" seasonal theme: night sky, pumpkin orange, a little purple.
+   Switches on automatically 24–31 Oct. Every rule is scoped under [data-theme="halloween"].
+   ===================================================================== */
+
+:root[data-theme="halloween"] {
+  --bg: #15110e; --surface: #1f1915; --surface-2: #2a221c;
+  --border: #3a2f27; --border-strong: #4d3f34; --dash: #7a6656;
+  --ink: #f6ece2; --ink-2: #e3d5c6; --muted: #b3a291;
+  --accent: #f28c28; --on-accent: #1d0e00; --accent-ink: #ffab5c; --accent-soft: #3d2410; --accent-soft-ink: #ffc58f;
+  --btn: #f6ece2; --btn-ink: #15110e; --good: #9ccf6b; --bad: #ff7a6b;
+  --outlier: #a78bfa; --outlier-bg: #2a2140; --outlier-ink: #c9b8ff;
+  --track: #3a2f27; --bar-2: #8a4f1c; --shadow: rgba(0, 0, 0, .45); --overlay: rgba(5, 3, 2, .7);
+  --h-purple: #7c3aed;
+  color-scheme: dark;
+}
+
+/* moonlit night sky */
+[data-theme="halloween"] body {
+  background:
+    radial-gradient(circle at 86% 12%, rgba(255, 236, 200, .16) 0 46px, rgba(255, 236, 200, .05) 47px 90px, transparent 91px),
+    radial-gradient(ellipse 120% 70% at 50% 110%, rgba(124, 58, 237, .14), transparent 60%),
+    #15110e;
+  background-attachment: fixed;
+}
+[data-theme="halloween"] .topbar,
+[data-theme="halloween"] .home header { background: #120e0b; border-bottom: 2px solid var(--accent); }
+[data-theme="halloween"] .logo .back { stroke: var(--ink); }
+[data-theme="halloween"] .logo .front { fill: var(--accent); }
+
+/* face-down cards are little pumpkins: orange with dark ribs */
+[data-theme="halloween"] .pcard.down {
+  background: repeating-linear-gradient(90deg, #f28c28 0 7px, #d9731a 7px 9px);
+  border: 3px solid var(--surface); box-shadow: 0 0 0 2px #f28c28, 0 0 14px rgba(242, 140, 40, .35);
+}
+[data-theme="halloween"] .vcard[aria-pressed="true"] { box-shadow: 0 0 18px rgba(242, 140, 40, .55); }
+[data-theme="halloween"] .table { background: radial-gradient(ellipse at 50% 120%, rgba(124, 58, 237, .18), transparent 60%), var(--surface-2); }
+[data-theme="halloween"] .progress div { background: linear-gradient(90deg, var(--h-purple), var(--accent)); }
+
+[data-theme="halloween"] .season-strip { background: linear-gradient(90deg, #2a1640, #3d2410); color: #ffc58f; }

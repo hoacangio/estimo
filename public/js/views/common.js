@@ -14,11 +14,17 @@ export function darkModeButton(app, size = "") {
 /** Dark-mode toggle + theme select (used in the room's Settings section). */
 export function themeControls(app, size = "") {
   const current = app.theme.current;
-  const options = Object.entries(FUN_THEMES)
-    .map(([key, t]) => `<option value="${key}" ${current === key ? "selected" : ""}>${t.label}</option>`).join("");
+  const option = ([key, t]) => `<option value="${key}" ${current === key ? "selected" : ""}>${t.label}</option>`;
+  const group = (label, seasonal) => `<optgroup label="${label}">${Object.entries(FUN_THEMES).filter(([, t]) => !!t.seasonal === seasonal).map(option).join("")}</optgroup>`;
   return `<span class="theme-btns">${darkModeButton(app, size)}`
     + `<label class="sr-only" for="theme-pick">Theme</label>`
-    + `<select id="theme-pick" class="select theme-pick" data-act="chooseTheme" title="Fun themes"><option value="">Default theme</option>${options}</select></span>`;
+    + `<select id="theme-pick" class="select theme-pick" data-act="chooseTheme" title="Themes"><option value="">Default theme</option>${group("Fun", false)}${group("Seasonal", true)}</select></span>`;
+}
+
+/** Festive greeting under the header while a seasonal theme is on. */
+export function seasonStrip(app) {
+  const banner = FUN_THEMES[app.theme.current]?.banner;
+  return banner ? `<div class="season-strip" role="note">${banner}</div>` : "";
 }
 
 /** Bottom sheet on phones, centred dialog on larger screens. */

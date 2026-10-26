@@ -6,7 +6,7 @@ import { esc } from "../lib/dom.js";
 import { icon, LOGO } from "../lib/icons.js";
 import { META_CARDS } from "../domain/decks.js";
 import { computeStats, finalOptions, fmt, voters } from "../domain/stats.js";
-import { retroTicker } from "./common.js";
+import { retroTicker, seasonStrip } from "./common.js";
 import { sidebarView } from "./sidebar.js";
 import { inviteView } from "./invite.js";
 import { sheetView } from "./sheets.js";
@@ -59,7 +59,7 @@ function header(app) {
       <button class="btn btn-accent btn-sm" data-act="openInvite" aria-label="Invite">${icon("qr")}<span class="label-wide">${app.t("Invite", "Mời bạn bè!")}</span></button>
       ${menu}
     </div>
-  </header>${retroTicker(app)}`;
+  </header>${seasonStrip(app)}${retroTicker(app)}`;
 }
 
 function loading(app) {

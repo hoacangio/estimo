@@ -22,6 +22,7 @@ Runs entirely on **Cloudflare Workers + Durable Objects** and fits comfortably i
 - **Installable app (PWA):** add to the home screen on Android, iOS and desktop; opens full screen and launches from cache even offline
 - **App-like feel:** press feedback on every control (replayed after re-render, so quick taps show it too), card pop, screen transitions (View Transitions), bottom sheets on phones, reveal flip, smooth progress, skeleton loading; all motion respects `prefers-reduced-motion`
 - **Brand:** Marigold amber `#F5A524` on warm neutrals; icons are generated from the tokens with `python3 scripts/make-icons.py`
+- **Seasonal themes that switch on by themselves:** Women's Day (7–8 Mar), Tết (23 tháng Chạp → mùng 7, dates in `public/js/domain/seasons.js`, table through 2036), Halloween (24–31 Oct), Christmas (18–26 Dec). A greeting strip and a one-time toast appear; choosing *Default* skips that occasion, and ⚙ Settings has an on/off switch
 - **Fun themes** (home → ⚙ Settings, or the room's sidebar), lazy-loaded so the default theme pays nothing (Retro 2007 also via the Konami code ↑↑↓↓←→←→BA)
 
 ## Architecture
@@ -49,7 +50,7 @@ Browser ──HTTPS──▶ Static Assets (edge cache)      public/
 main.js                 entry: new App(#app).start()
 App.js                  App class: UI state, routing, server messages, render(), user actions
 lib/                    dom helpers (esc, oneShot…), icons, localStorage + identity
-domain/                 pure logic, no DOM: room codes, decks, vote statistics
+domain/                 pure logic, no DOM: room codes, decks, vote statistics, seasons
 services/
   RoomConnection.js     WebSocket with reconnect/backoff and heartbeat
   api.js                REST calls (hosted rooms, delete room)

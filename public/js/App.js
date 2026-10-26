@@ -90,6 +90,8 @@ export class App {
     this.theme.apply();
     this.#bindEvents();
     this.onRoute();
+    const greeting = this.theme.seasonGreeting(); // e.g. "Happy Halloween!" once per season
+    if (greeting) setTimeout(() => toast(greeting), 600);
   }
 
   get roomUrl() { return `${location.origin}/r/${this.ui.room}`; }
@@ -479,6 +481,7 @@ export class App {
     changeDeck: (el) => this.send({ t: "deck", deck: el.value }),
     chooseTheme: (el) => { const greeting = this.theme.choose(el.value); this.withTransition(() => this.render()); if (greeting) toast(greeting); },
     toggleSpectator: (el) => { storage.set("spectator", el.checked); this.send({ t: "spectator", on: el.checked }); },
+    toggleSeasonal: (el) => { this.theme.seasonalAuto = el.checked; this.ui.fitKey = null; this.withTransition(() => this.render()); },
   };
 
   /** Form submissions */
@@ -535,7 +538,14 @@ export class App {
     // Back online / tab visible again: reconnect now instead of waiting for the next backoff step
     const reconnect = () => { if (this.ui.route === "room" && me.name && !this.ui.roomError) this.connection.reconnectNow(); };
     window.addEventListener("online", reconnect);
-    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") reconnect(); });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState !== "visible") return;
+      reconnect();
+      // a tab left open overnight picks up a season that started (or ended) meanwhile
+      const before = this.theme.current;
+      this.theme.apply();
+      if (this.theme.current !== before) { this.ui.fitKey = null; this.render(); }
+    });
     window.addEventListener("offline", () => this.render());
   }
 

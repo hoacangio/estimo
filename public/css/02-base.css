@@ -56,3 +56,6 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
 .logo b { font-family: var(--serif); font-weight: 600; font-size: 21px; }
 .logo .back { fill: none; stroke: var(--ink); stroke-width: 2; }
 .logo .front { fill: var(--accent); }
+
+/* Seasonal greeting under the header (colours come from the seasonal theme) */
+.season-strip { flex: none; text-align: center; font-size: 13px; font-weight: 600; line-height: 1.3; padding: 6px 12px; background: var(--accent-soft); color: var(--accent-soft-ink); }

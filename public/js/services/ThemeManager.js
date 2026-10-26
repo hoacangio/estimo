@@ -4,6 +4,7 @@
  */
 import { storage } from "../lib/storage.js";
 import { addStylesheet } from "../lib/dom.js";
+import { seasonOn } from "../domain/seasons.js";
 
 export const RETRO = "retro2007";
 
@@ -16,6 +17,15 @@ export const FUN_THEMES = {
                hello: "道 — The way of the estimate" },
   mission:   { label: "Mission Control", dark: true, font: "family=Orbitron:wght@500;700&family=Share+Tech+Mono",
                hello: "All systems go. Mission control online." },
+  // Seasonal themes: also switch on by themselves on their dates (domain/seasons.js)
+  womensday: { label: "Women's Day (8/3)", dark: false, seasonal: true,
+               hello: "Happy International Women's Day! 🌷", banner: "🌷 Happy International Women's Day — 8/3" },
+  tet:       { label: "Tết", dark: false, seasonal: true,
+               hello: "Chúc mừng năm mới! 🧧", banner: "🧧 Chúc Mừng Năm Mới · Happy Tết" },
+  halloween: { label: "Halloween", dark: true, seasonal: true,
+               hello: "Happy Halloween! 🎃", banner: "🎃 Happy Halloween" },
+  christmas: { label: "Christmas", dark: false, seasonal: true,
+               hello: "Merry Christmas! 🎄", banner: "🎄 Merry Christmas & Happy Holidays" },
 };
 
 /** Per-theme wording, keyed by the default English text. The meaning always stays the same. */
@@ -52,23 +62,61 @@ export class ThemeManager {
     return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
   }
 
-  /** Read the saved choice and apply it to <html data-theme>. */
+  /** Seasonal themes switch on by themselves unless turned off in Settings. */
+  get seasonalAuto() { return storage.get("seasonalThemes", true); }
+  set seasonalAuto(on) { storage.set("seasonalThemes", !!on); this.apply(); }
+
+  /**
+   * The season shown automatically right now, or null. It applies only while the saved choice
+   * is the default theme, and not after the user chose "Default" during this occurrence.
+   */
+  get autoSeason() {
+    if (!this.seasonalAuto || FUN_THEMES[this.saved]) return null;
+    const season = seasonOn();
+    return season && storage.get("seasonDismissed", "") !== season.id ? season : null;
+  }
+
+  /** What the user picked: "system" | "light" | "dark" | a fun theme name. */
+  get saved() {
+    const saved = storage.get("theme", "system");
+    return ["system", "light", "dark"].includes(saved) || FUN_THEMES[saved] ? saved : "system";
+  }
+
+  /** Apply the saved choice (or today's seasonal theme) to <html data-theme>. */
   apply() {
-    let saved = storage.get("theme", "system");
-    if (!["system", "light", "dark"].includes(saved) && !FUN_THEMES[saved]) saved = "system";
-    this.#loadAssets(saved);
-    if (saved === "system") document.documentElement.removeAttribute("data-theme");
-    else document.documentElement.setAttribute("data-theme", saved);
+    const active = this.autoSeason?.theme || this.saved;
+    this.#loadAssets(active);
+    if (active === "system") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", active);
+    storage.set("activeTheme", active); // read by boot.js on the next visit, before first paint
   }
 
   /** Light ⇄ dark (leaves any fun theme). */
-  toggleDark() { storage.set("theme", this.isDark ? "light" : "dark"); this.apply(); }
+  toggleDark() {
+    this.#dismissSeason();
+    storage.set("theme", this.isDark ? "light" : "dark");
+    this.apply();
+  }
 
   /** Switch to a fun theme by name, or back to the default with "". Returns its greeting, if any. */
   choose(name) {
+    if (!FUN_THEMES[name]) this.#dismissSeason(); // "Default" during a season means: not this time
     storage.set("theme", FUN_THEMES[name] ? name : "system");
     this.apply();
     return FUN_THEMES[name]?.hello ?? "";
+  }
+
+  /** Greeting for an automatic season, once per occurrence. */
+  seasonGreeting() {
+    const season = this.autoSeason;
+    if (!season || storage.get("seasonGreeted", "") === season.id) return "";
+    storage.set("seasonGreeted", season.id);
+    return FUN_THEMES[season.theme].hello;
+  }
+
+  #dismissSeason() {
+    const season = this.autoSeason;
+    if (season) storage.set("seasonDismissed", season.id);
   }
 
   /**
@@ -85,6 +133,6 @@ export class ThemeManager {
     const theme = FUN_THEMES[name];
     if (!theme) return;
     addStylesheet(`/themes/${name}.css`, { id: "theme-css-" + name, onload: () => this.onAssetsLoaded?.() });
-    addStylesheet(`${GOOGLE_FONTS}${theme.font}&display=swap`);
+    if (theme.font) addStylesheet(`${GOOGLE_FONTS}${theme.font}&display=swap`);
   }
 }

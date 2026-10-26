@@ -7,16 +7,23 @@ import { sheet } from "./common.js";
 export const sheetView = (app) => (app.ui.sheet.kind === "settings" ? settingsSheet(app) : roomSheet(app));
 
 function settingsSheet(app) {
-  const selected = app.theme.funTheme;
-  const options = [["", "Default"], ...Object.entries(FUN_THEMES).map(([key, t]) => [key, t.label])];
+  const { theme } = app;
+  const selected = theme.funTheme;
+  const auto = theme.autoSeason?.theme;
+  const option = ([key, label]) => `<button class="theme-opt" role="radio" aria-checked="${selected === key}" data-act="chooseTheme" data-theme="${key}">`
+    + `<span>${esc(label)}${auto && auto === key ? ' <span class="muted">· today</span>' : ""}</span>${selected === key ? icon("check") : ""}</button>`;
+  const themes = (seasonal) => Object.entries(FUN_THEMES).filter(([, t]) => !!t.seasonal === seasonal).map(([key, t]) => [key, t.label]);
   return sheet(app, {
     title: "Settings",
     body: `
-      <div class="set-row"><span>Dark mode</span><button class="btn btn-sm" data-act="toggleDark" ${selected ? "disabled" : ""}>${app.theme.isDark ? "On" : "Off"}</button></div>
+      <div class="set-row"><span>Dark mode</span><button class="btn btn-sm" data-act="toggleDark" ${selected ? "disabled" : ""}>${theme.isDark ? "On" : "Off"}</button></div>
       <div class="theme-list" role="radiogroup" aria-label="Theme">
         <span class="label">Theme</span>
-        ${options.map(([key, label]) => `<button class="theme-opt" role="radio" aria-checked="${selected === key}" data-act="chooseTheme" data-theme="${key}">${esc(label)}${selected === key ? icon("check") : ""}</button>`).join("")}
+        ${[["", "Default"], ...themes(false)].map(option).join("")}
+        <span class="label theme-group">Seasonal</span>
+        ${themes(true).map(option).join("")}
       </div>
+      <label class="check set-check"><input type="checkbox" data-act="toggleSeasonal" ${theme.seasonalAuto ? "checked" : ""}>Switch to seasonal themes automatically<span class="muted"> (8/3, Tết, Halloween, Christmas)</span></label>
       <button class="btn btn-lg" data-act="closeSheet">Done</button>`,
   });
 }

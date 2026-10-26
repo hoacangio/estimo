@@ -1,0 +1,50 @@
+/* =====================================================================
+   Estimo — "Christmas" seasonal theme: evergreen, cranberry red, gentle snow.
+   Switches on automatically 18–26 Dec. Every rule is scoped under [data-theme="christmas"].
+   ===================================================================== */
+
+:root[data-theme="christmas"] {
+  --bg: #f6f3ee; --surface: #ffffff; --surface-2: #eef3ee;
+  --border: #dfe5df; --border-strong: #c3cec4; --dash: #9faea1;
+  --ink: #16241b; --ink-2: #2f4236; --muted: #5a6b5f;
+  --accent: #c8102e; --on-accent: #ffffff; --accent-ink: #a50d26; --accent-soft: #fbe3e6; --accent-soft-ink: #7d0a1d;
+  --btn: #1f5132; --btn-ink: #ffffff; --good: #1f7a3f; --bad: #b3402a;
+  --outlier: #b8892b; --outlier-bg: #fbf2dd; --outlier-ink: #7a5a14;
+  --track: #dde6de; --bar-2: #f0b3bd; --shadow: rgba(22, 36, 27, .08);
+  --x-green: #1f5132; --x-gold: #d4a017;
+  color-scheme: light;
+}
+
+/* slow snowfall (decorative, behind everything; stops with reduced motion) */
+[data-theme="christmas"] body { background: var(--bg); }
+[data-theme="christmas"] body::before {
+  content: ""; position: fixed; inset: -100px 0 0; pointer-events: none; z-index: 0; opacity: .7;
+  background-image:
+    radial-gradient(circle, #c9d6e3 0 2px, transparent 2.5px),
+    radial-gradient(circle, #d8e2ec 0 1.5px, transparent 2px),
+    radial-gradient(circle, #c9d6e3 0 1px, transparent 1.5px);
+  background-size: 160px 160px, 110px 110px, 70px 70px;
+  background-position: 0 0, 40px 60px, 20px 30px;
+  animation: x-snow 18s linear infinite; animation-delay: var(--clock, 0ms);
+}
+@keyframes x-snow { to { background-position: 0 160px, 40px 170px, 20px 100px; } }
+[data-theme="christmas"] #app { position: relative; z-index: 1; }
+
+[data-theme="christmas"] .topbar,
+[data-theme="christmas"] .home header { background: var(--x-green); color: #fff; border-bottom: 3px solid var(--accent); }
+[data-theme="christmas"] .topbar .code, [data-theme="christmas"] .logo { color: #fff; }
+[data-theme="christmas"] .logo .back { stroke: #fff; }
+[data-theme="christmas"] .logo .front { fill: var(--accent); }
+[data-theme="christmas"] .topbar .btn:not(.btn-accent), [data-theme="christmas"] .home header .btn { background: transparent; color: #fff; border-color: rgba(255, 255, 255, .45); }
+
+/* face-down cards are wrapped presents: red with a gold ribbon */
+[data-theme="christmas"] .pcard.down {
+  background:
+    linear-gradient(var(--x-gold), var(--x-gold)) center / 6px 100% no-repeat,
+    linear-gradient(var(--x-gold), var(--x-gold)) center / 100% 6px no-repeat,
+    var(--accent);
+  border: 3px solid var(--surface); box-shadow: 0 0 0 2px var(--accent);
+}
+[data-theme="christmas"] .table { background: var(--surface-2); }
+
+[data-theme="christmas"] .season-strip { background: var(--accent); color: #fff; }

@@ -1,0 +1,45 @@
+/* =====================================================================
+   Estimo — "Tết" seasonal theme: lucky red and gold, apricot blossoms.
+   Switches on automatically from 23 tháng Chạp to mùng 7. Scoped under [data-theme="tet"].
+   ===================================================================== */
+
+:root[data-theme="tet"] {
+  --bg: #fff8ec; --surface: #fffdf8; --surface-2: #fdeed3;
+  --border: #f2dcb4; --border-strong: #e2c28a; --dash: #c9a464;
+  --ink: #2a1408; --ink-2: #4a2a16; --muted: #7a5636;
+  --accent: #d7261e; --on-accent: #fff6d6; --accent-ink: #b01e17; --accent-soft: #fde2d6; --accent-soft-ink: #8a140f;
+  --btn: #b01e17; --btn-ink: #fff6d6; --good: #3f7a3a; --bad: #9e2018;
+  --outlier: #a06a00; --outlier-bg: #fff1c9; --outlier-ink: #6e4800;
+  --track: #f2dcb4; --bar-2: #f6c76a; --shadow: rgba(120, 50, 10, .1);
+  --t-gold: #f2b705; --t-gold-deep: #c99400;
+  color-scheme: light;
+}
+
+/* apricot blossoms (hoa mai) in the corners */
+[data-theme="tet"] body {
+  background:
+    radial-gradient(circle at 6% 14%, rgba(242, 183, 5, .28) 0 7px, transparent 8px),
+    radial-gradient(circle at 9% 9%, rgba(242, 183, 5, .22) 0 5px, transparent 6px),
+    radial-gradient(circle at 92% 88%, rgba(242, 183, 5, .25) 0 8px, transparent 9px),
+    radial-gradient(circle at 88% 93%, rgba(215, 38, 30, .12) 0 6px, transparent 7px),
+    #fff8ec;
+  background-attachment: fixed;
+}
+
+[data-theme="tet"] .topbar,
+[data-theme="tet"] .home header { background: var(--accent); color: #fff6d6; border-bottom: 3px solid var(--t-gold); }
+[data-theme="tet"] .topbar .code, [data-theme="tet"] .logo { color: #fff6d6; }
+[data-theme="tet"] .logo .back { stroke: var(--t-gold); }
+[data-theme="tet"] .logo .front { fill: #fff6d6; }
+[data-theme="tet"] .topbar .btn:not(.btn-accent), [data-theme="tet"] .home header .btn { background: transparent; color: #fff6d6; border-color: rgba(255, 246, 214, .5); }
+[data-theme="tet"] .topbar .btn-accent { background: var(--t-gold); border-color: var(--t-gold); color: #3a1a00; }
+
+/* face-down cards are lì xì envelopes: red with a gold seal */
+[data-theme="tet"] .pcard.down {
+  background: radial-gradient(circle at 50% 42%, var(--t-gold) 0 7px, var(--t-gold-deep) 7.5px 9px, transparent 9.5px), var(--accent);
+  border: 3px solid var(--surface); box-shadow: 0 0 0 2px var(--t-gold);
+}
+[data-theme="tet"] .vcard[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--t-gold); }
+[data-theme="tet"] .progress div { background: linear-gradient(90deg, var(--accent), var(--t-gold)); }
+
+[data-theme="tet"] .season-strip { background: linear-gradient(90deg, #b01e17, #d7261e, #b01e17); color: #ffe27a; }
