@@ -15,7 +15,10 @@ export function darkModeButton(app, size = "") {
 export function themeControls(app, size = "") {
   const current = app.theme.current;
   const option = ([key, t]) => `<option value="${key}" ${current === key ? "selected" : ""}>${t.label}</option>`;
-  const group = (label, seasonal) => `<optgroup label="${label}">${Object.entries(FUN_THEMES).filter(([, t]) => !!t.seasonal === seasonal).map(option).join("")}</optgroup>`;
+  const group = (label, seasonal) => {
+    const themes = app.theme.available({ seasonal });
+    return themes.length ? `<optgroup label="${label}">${themes.map(option).join("")}</optgroup>` : "";
+  };
   return `<span class="theme-btns">${darkModeButton(app, size)}`
     + `<label class="sr-only" for="theme-pick">Theme</label>`
     + `<select id="theme-pick" class="select theme-pick" data-act="chooseTheme" title="Themes"><option value="">Default theme</option>${group("Fun", false)}${group("Seasonal", true)}</select></span>`;

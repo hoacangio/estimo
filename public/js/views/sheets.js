@@ -1,7 +1,6 @@
 /** Bottom sheets: Settings (theme) and "Delete room?" / "Remove from recent rooms?". */
 import { esc } from "../lib/dom.js";
 import { icon } from "../lib/icons.js";
-import { FUN_THEMES } from "../services/ThemeManager.js";
 import { sheet } from "./common.js";
 
 export const sheetView = (app) => (app.ui.sheet.kind === "settings" ? settingsSheet(app) : roomSheet(app));
@@ -12,7 +11,8 @@ function settingsSheet(app) {
   const auto = theme.autoSeason?.theme;
   const option = ([key, label]) => `<button class="theme-opt" role="radio" aria-checked="${selected === key}" data-act="chooseTheme" data-theme="${key}">`
     + `<span>${esc(label)}${auto && auto === key ? ' <span class="muted">· today</span>' : ""}</span>${selected === key ? icon("check") : ""}</button>`;
-  const themes = (seasonal) => Object.entries(FUN_THEMES).filter(([, t]) => !!t.seasonal === seasonal).map(([key, t]) => [key, t.label]);
+  const themes = (seasonal) => theme.available({ seasonal }).map(([key, t]) => [key, t.label]);
+  const seasonal = themes(true);
   return sheet(app, {
     title: "Settings",
     body: `
@@ -20,10 +20,9 @@ function settingsSheet(app) {
       <div class="theme-list" role="radiogroup" aria-label="Theme">
         <span class="label">Theme</span>
         ${[["", "Default"], ...themes(false)].map(option).join("")}
-        <span class="label theme-group">Seasonal</span>
-        ${themes(true).map(option).join("")}
+        ${seasonal.length ? `<span class="label theme-group">Seasonal</span>${seasonal.map(option).join("")}` : ""}
       </div>
-      <label class="check set-check"><input type="checkbox" data-act="toggleSeasonal" ${theme.seasonalAuto ? "checked" : ""}>Switch to seasonal themes automatically<span class="muted"> (8/3, Tết, Halloween, Christmas)</span></label>
+      <label class="check set-check"><input type="checkbox" data-act="toggleSeasonal" ${theme.seasonalAuto ? "checked" : ""}>Switch to seasonal themes automatically<span class="muted"> (8/3, Tết, Halloween, Christmas — from 3 weeks before)</span></label>
       <button class="btn btn-lg" data-act="closeSheet">Done</button>`,
   });
 }

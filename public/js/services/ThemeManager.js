@@ -4,7 +4,7 @@
  */
 import { storage } from "../lib/storage.js";
 import { addStylesheet } from "../lib/dom.js";
-import { seasonOn } from "../domain/seasons.js";
+import { seasonOn, isInSeason } from "../domain/seasons.js";
 
 export const RETRO = "retro2007";
 
@@ -76,10 +76,18 @@ export class ThemeManager {
     return season && storage.get("seasonDismissed", "") !== season.id ? season : null;
   }
 
-  /** What the user picked: "system" | "light" | "dark" | a fun theme name. */
+  /** What the user picked: "system" | "light" | "dark" | a fun theme name.
+   *  A seasonal theme picked by hand ends with its season (back to the default). */
   get saved() {
     const saved = storage.get("theme", "system");
-    return ["system", "light", "dark"].includes(saved) || FUN_THEMES[saved] ? saved : "system";
+    if (["system", "light", "dark"].includes(saved)) return saved;
+    if (!FUN_THEMES[saved] || (FUN_THEMES[saved].seasonal && !isInSeason(saved))) return "system";
+    return saved;
+  }
+
+  /** Themes offered in the pickers: every fun theme, plus seasonal ones only during their season. */
+  available({ seasonal }) {
+    return Object.entries(FUN_THEMES).filter(([key, t]) => (seasonal ? t.seasonal && isInSeason(key) : !t.seasonal));
   }
 
   /** Apply the saved choice (or today's seasonal theme) to <html data-theme>. */

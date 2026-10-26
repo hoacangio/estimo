@@ -1,11 +1,14 @@
 /**
- * Seasonal themes and when they switch on automatically (dates in the viewer's local time).
+ * Seasonal themes exist only around their occasion: from 3 weeks before the day until the
+ * day itself (Tết: until mùng 7). Outside that period they are neither applied automatically
+ * nor offered in Settings. Dates are in the viewer's local time.
  *
- *   Women's Day  7–8 March
- *   Tết          from 23 tháng Chạp (7 days before) to mùng 7 (6 days after) Lunar New Year
- *   Halloween    24–31 October
- *   Christmas    18–26 December
+ *   Women's Day  15 Feb – 8 Mar
+ *   Tết          21 days before mùng 1 – mùng 7
+ *   Halloween    10 – 31 Oct
+ *   Christmas     4 – 26 Dec
  */
+const LEAD_DAYS = 21;
 
 /** First day of Tết (Vietnamese Lunar New Year). Source: Wikipedia "Tết" zodiac table.
  *  Intl's Chinese calendar is not used: it differs from Vietnam's in some years (e.g. 2027). */
@@ -23,20 +26,27 @@ function tetWindow(year) {
   if (!iso) return null;
   const [m, d] = iso.split("-").map(Number);
   const newYear = fixed(year, m, d);
-  return [newYear - 7, newYear + 6];
+  return [newYear - LEAD_DAYS, newYear + 6];
 }
 
-/** @returns {{ theme: string, id: string } | null}  id is unique per occurrence, e.g. "tet-2027" */
-export function seasonOn(date = new Date()) {
+/** Seasons running on `date`, in priority order (Tết first if it overlaps Women's Day).
+ *  @returns {{ theme: string, id: string }[]}  id is unique per occurrence, e.g. "tet-2027" */
+export function activeSeasons(date = new Date()) {
   const year = date.getFullYear(), today = dayNumber(date);
+  const before = (month, day) => [fixed(year, month, day) - LEAD_DAYS, fixed(year, month, day)];
   const windows = [
-    ["womensday", [fixed(year, 3, 7), fixed(year, 3, 8)]],
     ["tet", tetWindow(year)],
-    ["halloween", [fixed(year, 10, 24), fixed(year, 10, 31)]],
-    ["christmas", [fixed(year, 12, 18), fixed(year, 12, 26)]],
+    ["womensday", before(3, 8)],
+    ["halloween", before(10, 31)],
+    ["christmas", [fixed(year, 12, 25) - LEAD_DAYS, fixed(year, 12, 26)]],
   ];
-  for (const [theme, range] of windows) {
-    if (range && today >= range[0] && today <= range[1]) return { theme, id: `${theme}-${year}` };
-  }
-  return null;
+  return windows
+    .filter(([, range]) => range && today >= range[0] && today <= range[1])
+    .map(([theme]) => ({ theme, id: `${theme}-${year}` }));
 }
+
+/** The season to apply automatically today, or null. */
+export const seasonOn = (date = new Date()) => activeSeasons(date)[0] ?? null;
+
+/** Is this seasonal theme available today? */
+export const isInSeason = (theme, date = new Date()) => activeSeasons(date).some((s) => s.theme === theme);
