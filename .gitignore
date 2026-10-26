@@ -5,3 +5,4 @@ scripts/.worker.local.mjs
 *.log
 .DS_Store
 __pycache__/
+test/ui/shots/

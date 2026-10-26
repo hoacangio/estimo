@@ -4,6 +4,8 @@ Realtime planning poker for agile teams. Create a room, share the link or QR cod
 
 Runs entirely on **Cloudflare Workers + Durable Objects** and fits comfortably in the **free plan** for internal use.
 
+> Handing over to an AI agent or a new team? Start with **[AGENTS.md](AGENTS.md)** (context, conventions, verification, AWS migration plan).
+
 ## Features
 
 - Rooms by link, short room code (e.g. `TIGER-472`, case-insensitive) or **QR code** (generated in the browser, no external service)
@@ -116,9 +118,10 @@ Durable Objects on the Workers Free plan allow 100,000 requests and 100,000 SQLi
 
 ```bash
 node scripts/local-server.mjs 8787 &
-node test/security.test.mjs http://localhost:8787     # 17 protocol-level attack tests (also run in CI)
+node test/security.test.mjs http://localhost:8787     # 21 protocol-level attack tests (also run in CI)
 python3 test/browser_security.py http://localhost:8787 # XSS, CSV injection, clickjacking, CSP
 node test/perf/load.mjs http://localhost:8787          # latency, fan-out, concurrent rooms
+ESTIMO_URL=http://localhost:8787 test/ui/run_all.sh    # UI regression (Playwright for Python + Chromium)
 ```
 
 ## Privacy & security
