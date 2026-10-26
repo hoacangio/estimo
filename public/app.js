@@ -30,6 +30,7 @@ const ICON = {
   pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
   x: '<path d="M6 6l12 12M18 6 6 18"/>',
+  trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
   cup: '<path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><path d="M6 2v2M10 2v2M14 2v2"/>',
   expand: '<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>',
   download: '<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
@@ -164,7 +165,20 @@ function onRoute() {
   if (ui.route !== "room" || ui.roomError?.room !== ui.room) ui.roomError = null;
   if (ui.route === "room" && validCode(ui.room) && me.name && !ui.roomError) connect();
   else disconnect();
+  if (ui.route !== "room") ui.sheet = null;
+  if (ui.route === "home") loadHostInfo();
   render();
+}
+// Ask the server how many rooms this browser hosts, so Create is blocked up front at the limit.
+async function loadHostInfo() {
+  try {
+    const r = await fetch("/api/host/rooms", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: me.id }) });
+    const d = await r.json();
+    if (!d?.ok || !Array.isArray(d.rooms)) return;
+    const was = JSON.stringify(ui.limitInfo);
+    ui.limitInfo = d.rooms.length >= d.max ? { max: d.max, rooms: d.rooms } : null;
+    if (ui.route === "home" && JSON.stringify(ui.limitInfo) !== was) render();
+  } catch {} // offline: the server still enforces the limit when the room is created
 }
 window.addEventListener("popstate", () => withTransition(onRoute));
 
@@ -226,7 +240,8 @@ function onServerError(msg) {
 }
 function onRoomDeleted(msg) {
   const code = ui.room;
-  forget(code); disconnect();
+  roomDeleted(code); disconnect();
+  if (ui.deletingSelf === code) return; // we deleted it ourselves: confirmSheet() takes us home
   ui.roomError = { room: code, code: msg.reason === "expired" ? "expired" : "deleted" };
   render();
 }
@@ -285,12 +300,13 @@ function onState(s) {
   render();
 }
 
+const MAX_RECENT = 20;
 function remember(code, deck, host) {
   if (!code) return;
   const list = LS.get("recentRooms", []).filter((r) => r.code !== code);
   const old = LS.get("recentRooms", []).find((r) => r.code === code);
   list.unshift({ code, deck: deck || old?.deck || "", host: host ?? old?.host ?? false, at: Date.now() });
-  LS.set("recentRooms", list.slice(0, 5));
+  LS.set("recentRooms", list.slice(0, MAX_RECENT));
 }
 
 /* ---------------- stats ---------------- */
@@ -427,7 +443,7 @@ function viewHome() {
               </div>
               <div class="hint mono deck-hint">${esc(deck[2])}</div>
             </div>
-            <button class="btn btn-primary btn-lg create-btn" type="submit">${T("Create a new room", "Tạo phòng ngay »")}</button>
+            <button class="btn btn-primary btn-lg create-btn" type="submit" ${ui.limitInfo ? 'disabled aria-describedby="limit-note"' : ""}>${ui.limitInfo ? `Room limit reached (${ui.limitInfo.max})` : T("Create a new room", "Tạo phòng ngay »")}</button>
           </form>
           <div class="divider">or join an existing one</div>
           <form id="join-form" class="join-row">
@@ -435,8 +451,8 @@ function viewHome() {
             <input class="input" id="code" value="${esc(ui.draftCode ?? "")}" placeholder="e.g. calm-otter-42" autocapitalize="off" autocomplete="off" spellcheck="false">
             <button class="btn" type="submit" style="height:48px;border-color:var(--ink)">${T("Join", "Vào!")}</button>
           </form>
-          ${ui.limitInfo ? `<div class="notice" role="alert"><strong>Room limit reached (${ui.limitInfo.max}).</strong> Delete a room to create a new one:
-            <div class="notice-rooms">${ui.limitInfo.rooms.map((c) => `<a class="mono" href="/r/${esc(c)}" data-nav="/r/${esc(c)}">${esc(c)}</a>`).join("")}</div></div>` : ""}
+          ${ui.limitInfo ? `<div class="notice" id="limit-note" role="status"><strong>You host ${ui.limitInfo.max} of ${ui.limitInfo.max} rooms.</strong> Delete one to create a new room:
+            <div class="notice-rooms">${ui.limitInfo.rooms.map((c) => `<span class="nr"><a class="mono" href="/r/${esc(c)}" data-nav="/r/${esc(c)}">${esc(c)}</a><button type="button" class="nr-del" data-act="roomSheet" data-code="${esc(c)}" data-host="1" aria-label="Delete ${esc(c)}">${icon("trash")}</button></span>`).join("")}</div></div>` : ""}
           ${ui.joinError ? `<div class="hint" style="color:var(--bad)">${esc(ui.joinError)}</div>` : ""}
           ${viewInstall()}
           ${recent.length ? `
@@ -445,13 +461,69 @@ function viewHome() {
               <button type="button" class="btn btn-icon btn-sm" data-act="recentPage" data-dir="-1" aria-label="Previous page" ${page === 0 ? "disabled" : ""}>‹</button>
               <span class="muted">${page + 1}/${pages}</span>
               <button type="button" class="btn btn-icon btn-sm" data-act="recentPage" data-dir="1" aria-label="Next page" ${page === pages - 1 ? "disabled" : ""}>›</button></div>` : ""}</div>
-            ${recent.slice(page * RECENT_PAGE, page * RECENT_PAGE + RECENT_PAGE).map((r) => `<a href="/r/${esc(r.code)}" data-nav="/r/${esc(r.code)}"><span class="mono">${esc(r.code)}${r.host ? ' <span class="tag">Host</span>' : ""}</span><span class="muted" style="font-size:13px">${esc(ago(r.at))}${r.deck ? " · " + esc(deckLabel(r.deck)) : ""}</span></a>`).join("")}
+            ${recent.slice(page * RECENT_PAGE, page * RECENT_PAGE + RECENT_PAGE).map((r) => `<div class="recent-row"><a href="/r/${esc(r.code)}" data-nav="/r/${esc(r.code)}"><span class="mono">${esc(r.code)}${r.host ? ' <span class="tag">Host</span>' : ""}</span><span class="muted" style="font-size:13px">${esc(ago(r.at))}${r.deck ? " · " + esc(deckLabel(r.deck)) : ""}</span></a><button type="button" class="btn btn-icon btn-sm row-act" data-act="roomSheet" data-code="${esc(r.code)}" aria-label="${r.host ? "Delete" : "Remove"} ${esc(r.code)}">${icon(r.host ? "trash" : "x")}</button></div>`).join("")}
           </div>` : ""}
         </section>
       </div>
     </main>
     ${isRetro() ? retroFooter() : `<footer><span>Rooms are deleted after 30 days of inactivity.</span><span>v1.0</span></footer>`}
+  </div>${ui.sheet ? viewRoomSheet() : ""}`;
+}
+// Bottom sheet (dialog on desktop): delete a room you host, or drop one from the list
+function viewRoomSheet() {
+  const { code, host, busy, error } = ui.sheet;
+  const o = oneShot(ui.sheet.at, 340, "enter");
+  return `
+  <div class="overlay${o.cls}"${o.style} data-act="closeSheet">
+    <div class="dialog room-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" data-stop>
+      <span class="sheet-handle" aria-hidden="true"></span>
+      <h2 id="sheet-title">${host ? "Delete room?" : "Remove from recent rooms?"}</h2>
+      <p class="mono sheet-code">${esc(code)}</p>
+      <p class="muted">${host ? "The room and its ticket history are deleted for everyone in it. This can’t be undone." : "Only removes it from this device. The room itself is not deleted."}</p>
+      ${error ? `<p class="sheet-error" role="alert">${esc(error)}</p>` : ""}
+      <div class="sheet-actions">
+        <button class="btn btn-lg" data-act="closeSheet" ${busy ? "disabled" : ""}>Cancel</button>
+        <button class="btn btn-lg ${host ? "btn-danger-solid" : "btn-primary"}" data-act="confirmSheet" ${busy ? "disabled" : ""}>${busy ? "Deleting…" : host ? "Delete room" : "Remove"}</button>
+      </div>
+    </div>
   </div>`;
+}
+function openRoomSheet(code, hostHint) {
+  const r = LS.get("recentRooms", []).find((x) => x.code === code);
+  ui.sheet = { code, host: hostHint || !!r?.host, at: performance.now() };
+  render();
+  $(".room-sheet [data-act=confirmSheet]")?.focus();
+}
+function closeSheet() { if (ui.sheet?.busy) return; withTransition(() => { ui.sheet = null; render(); }); }
+async function confirmSheet() {
+  const sh = ui.sheet; if (!sh || sh.busy) return;
+  if (!sh.host) { forget(sh.code); ui.sheet = null; render(); toast("Removed from recent rooms."); return; }
+  sh.busy = true; sh.error = ""; render();
+  const inRoom = ui.route === "room" && ui.room === sh.code;
+  if (inRoom) ui.deletingSelf = sh.code;
+  let res = null;
+  try {
+    const r = await fetch(`/api/rooms/${encodeURIComponent(sh.code)}/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: me.id }) });
+    res = await r.json().catch(() => null);
+  } catch {}
+  if (ui.sheet !== sh) return;
+  if (res?.ok) {
+    roomDeleted(sh.code); ui.sheet = null; ui.deletingSelf = null;
+    loadHostInfo(); // resync with the server's list
+    if (inRoom) { disconnect(); go("/"); } else render();
+    toast(ui.canCreate ? "Room deleted. You can create a new room now." : "Room deleted.");
+    ui.canCreate = false;
+  } else {
+    if (inRoom) ui.deletingSelf = null;
+    sh.busy = false; sh.error = res?.code === "forbidden" ? "Only the host’s device can delete this room." : "Couldn’t delete the room. Check your connection and try again."; render(); }
+}
+// Refresh everything that lists this room once it is gone
+function roomDeleted(code) {
+  forget(code);
+  if (ui.limitInfo) {
+    ui.limitInfo.rooms = ui.limitInfo.rooms.filter((c) => c !== code);
+    if (ui.limitInfo.rooms.length < ui.limitInfo.max) { ui.limitInfo = null; ui.canCreate = true; }
+  }
 }
 function deckLabel(k) { return (HOME_DECKS.find((d) => d[0] === k) || [k, k])[1]; }
 function ago(t) {
@@ -539,7 +611,7 @@ function viewRoom() {
       </aside>
     </div>
     ${ui.drawerOpen ? `<div class="scrim" data-act="closeDrawer"${anim.style}></div>` : ""}
-  </div>` + (ui.showInvite ? viewInvite() : "");
+  </div>` + (ui.showInvite ? viewInvite() : "") + (ui.sheet ? viewRoomSheet() : "");
 }
 function openDrawer() { ui.drawerOpen = true; ui.drawerAt = performance.now(); ui.drawerLeaveAt = null; render(); }
 function closeDrawer() {
@@ -681,7 +753,7 @@ function viewSettings(s) {
       <button class="me" data-act="rename" aria-label="Change nickname"><span class="avatar">${esc(initial(me.name))}</span><span>${esc(me.name)}</span>${icon("pen")}</button></div>
     <label class="check set-check"><input type="checkbox" data-act="spectator" ${meP?.spectator ? "checked" : ""}>Spectator (watch without voting)</label>
     ${s.host && s.host === s.you ? `<div class="danger-zone">
-      <button class="btn btn-sm btn-danger" data-act="deleteRoom">${ui.confirmDelete && Date.now() - ui.confirmDelete < 4000 ? "Click again to confirm" : "Delete room"}</button>
+      <button class="btn btn-sm btn-danger" data-act="deleteRoom">${icon("trash")}Delete room</button>
       <span class="muted">Deletes the room and its history for all participants.</span>
     </div>` : ""}
   </section>`;
@@ -802,6 +874,9 @@ document.addEventListener("click", (e) => {
     case "skip": send({ t: "next", topic: "" }); break;
     case "next": send({ t: "next", topic: "", final: ui.final }); break;
     case "final": ui.final = el.dataset.v; render(); break;
+    case "roomSheet": openRoomSheet(el.dataset.code, el.dataset.host === "1"); break;
+    case "closeSheet": closeSheet(); break;
+    case "confirmSheet": confirmSheet(); break;
     case "recentPage": ui.recentPage = (ui.recentPage || 0) + Number(el.dataset.dir); render(); break;
     case "toggleDrawer": ui.drawerOpen && !ui.drawerLeaveAt ? closeDrawer() : openDrawer(); break;
     case "closeDrawer": closeDrawer(); break;
@@ -813,11 +888,7 @@ document.addEventListener("click", (e) => {
     case "csv": exportCsv(); break;
     case "install": installApp(); break;
     case "installLater": LS.set("installDismissed", Date.now()); render(); break;
-    case "deleteRoom":
-      // Two-step confirm without a blocking browser dialog
-      if (ui.confirmDelete && Date.now() - ui.confirmDelete < 4000) { ui.confirmDelete = null; send({ t: "deleteRoom" }); }
-      else { ui.confirmDelete = Date.now(); render(); setTimeout(() => { if (ui.confirmDelete && Date.now() - ui.confirmDelete >= 4000) { ui.confirmDelete = null; render(); } }, 4100); }
-      break;
+    case "deleteRoom": ui.drawerOpen = false; ui.drawerLeaveAt = null; openRoomSheet(ui.room, true); break;
     case "rename": {
       const n = (prompt("Your nickname", me.name) || "").trim().slice(0, 24);
       if (n && n !== me.name) { me.name = n; send({ t: "rename", name: n }); render(); }
@@ -841,6 +912,7 @@ document.addEventListener("submit", (e) => {
   e.preventDefault();
   const f = e.target;
   if (f.id === "create-form") {
+    if (ui.limitInfo) return; // blocked at the limit; the server enforces it too
     const n = $("#nick").value.trim().slice(0, 24); if (!n) return;
     const code = newRoomCode();
     me.name = n; ui.pendingDeck = ui.homeDeck; ui.pendingCreate = code; ui.limitInfo = null; go(`/r/${code}`);
@@ -856,6 +928,7 @@ document.addEventListener("submit", (e) => {
   }
 });
 document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && ui.sheet) { closeSheet(); return; }
   if (e.key === "Escape" && ui.showInvite) { ui.showInvite = false; ui.fullInvite = false; render(); return; }
   if (e.key === "Escape" && ui.drawerOpen) { closeDrawer(); return; }
   const tag = (e.target.tagName || "").toLowerCase();

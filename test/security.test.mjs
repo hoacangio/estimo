@@ -244,6 +244,49 @@ await test("S17", "Each host can own at most MAX_ROOMS_PER_HOST rooms (default 5
   [...made, retry].forEach((c) => c.close());
 });
 
+const post = (path, body, headers = { "Content-Type": "application/json" }) =>
+  fetch(new URL(path, BASE), { method: "POST", headers, body: typeof body === "string" ? body : JSON.stringify(body) });
+
+await test("S18", "Delete API: only the host's secret id deletes a room; others get 403", async () => {
+  const r = room("api"), hostId = crypto.randomUUID();
+  const host = client(r, "Host", { id: hostId }); await host.ready; await host.settle(250);
+  const guest = client(r, "Guest", { create: false }); await guest.ready; await guest.settle(250);
+  const stranger = await post(`/api/rooms/${r}/delete`, { id: crypto.randomUUID() });
+  assert(stranger.status === 403 && !guest.closed, "a stranger's id deleted the room");
+  const ok = await post(`/api/rooms/${r}/delete`, { id: hostId });
+  assert(ok.status === 200 && (await ok.json()).ok, "host could not delete via the API");
+  await guest.settle(300);
+  assert(guest.closed?.code === 4000, "connected guest was not told the room was deleted");
+  const list = await (await post("/api/host/rooms", { id: hostId })).json();
+  assert(!list.rooms.includes(r), "deleted room still counts toward the host's limit");
+  host.close();
+});
+
+await test("S19", "Delete API rejects cross-site, non-JSON, wrong-method and malformed requests", async () => {
+  const r = room("api2"), hostId = crypto.randomUUID();
+  const host = client(r, "Host", { id: hostId }); await host.ready; await host.settle(250);
+  const cross = await post(`/api/rooms/${r}/delete`, { id: hostId }, { "Content-Type": "application/json", Origin: "https://evil.example" });
+  const form = await post(`/api/rooms/${r}/delete`, `id=${hostId}`, { "Content-Type": "application/x-www-form-urlencoded" });
+  const getReq = await fetch(new URL(`/api/rooms/${r}/delete`, BASE));
+  const bad = await post(`/api/rooms/${r}/delete`, { id: { toString: 1 } });
+  const huge = await post(`/api/rooms/${r}/delete`, { id: hostId, pad: "x".repeat(500) });
+  const badRoom = await post(`/api/rooms/..%2Fx/delete`, { id: hostId });
+  assert(cross.status === 403 && form.status === 415 && getReq.status === 405 && bad.status === 400 && huge.status === 413 && badRoom.status >= 400,
+    `unexpected statuses ${[cross, form, getReq, bad, huge, badRoom].map((x) => x.status)}`);
+  await host.settle(200);
+  assert(!host.closed, "a rejected request deleted the room");
+  host.close();
+});
+
+await test("S20", "Host room list is per secret id and never leaks another host's rooms", async () => {
+  const a = crypto.randomUUID();
+  const c = client(room("own"), "A", { id: a }); await c.ready; await c.settle(250);
+  const mine = await (await post("/api/host/rooms", { id: a })).json();
+  const other = await (await post("/api/host/rooms", { id: crypto.randomUUID() })).json();
+  assert(mine.rooms.length === 1 && mine.max >= 1 && other.rooms.length === 0, "host room list is wrong or leaks");
+  c.close();
+});
+
 const failed = results.filter((r) => !r.ok);
 console.log(`\n${results.length - failed.length}/${results.length} passed`);
 process.exit(failed.length ? 1 : 0);

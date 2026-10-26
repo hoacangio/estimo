@@ -24,7 +24,7 @@ const src = (await fs.readFile(path.join(ROOT, "src/worker.js"), "utf8"))
   .replace(/from\s*["']\.\/decks\.js["']/, `from ${JSON.stringify(url.pathToFileURL(path.join(ROOT, "src/decks.js")).href)}`);
 const tmp = path.join(ROOT, "scripts", ".worker.local.mjs");
 await fs.writeFile(tmp, src);
-const { Room, HostRegistry, isAllowedOrigin, MAX_CONNECTIONS } = await import(url.pathToFileURL(tmp).href + `?t=${Date.now()}`);
+const { Room, HostRegistry, isAllowedOrigin, MAX_CONNECTIONS, handleApi } = await import(url.pathToFileURL(tmp).href + `?t=${Date.now()}`);
 await fs.unlink(tmp).catch(() => {});
 
 /* ---------- Durable Object runtime emulation ---------- */
@@ -155,7 +155,14 @@ try {
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".json": "application/json", ".ico": "image/x-icon", ".webmanifest": "application/manifest+json" };
 const server = http.createServer(async (req, res) => {
   const p = decodeURIComponent(new URL(req.url, "http://x").pathname);
-  if (p === "/api/health") { res.writeHead(200, { "content-type": "application/json" }); return res.end('{"ok":true}'); }
+  if (p.startsWith("/api/")) { // same handler as the Worker; ROOM stubs call the in-memory Room directly
+    const chunks = []; for await (const c of req) chunks.push(c);
+    const body = ["GET", "HEAD"].includes(req.method) ? undefined : Buffer.concat(chunks);
+    const r = new Request(`http://${req.headers.host}${req.url}`, { method: req.method, headers: req.headers, body });
+    const roomNs = { idFromName: (n) => n, get: (id) => ({ deleteByHost: async (...a) => (await getRoom(id)).room.deleteByHost(...a) }) };
+    const out = await handleApi(r, new URL(r.url), { ...env, ROOM: roomNs });
+    res.writeHead(out.status, Object.fromEntries(out.headers)); return res.end(await out.text());
+  }
   let file = path.join(ROOT, "public", path.normalize(p).replace(/^(\.\.[/\\])+/, ""));
   try { if ((await fs.stat(file)).isDirectory()) file = path.join(file, "index.html"); }
   catch { file = path.join(ROOT, "public", "index.html"); } // single-page-application fallback

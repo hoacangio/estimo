@@ -137,6 +137,29 @@ svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-widt
 .recent a { display: flex; justify-content: space-between; padding: 12px 0; text-decoration: none; color: var(--ink); border-bottom: 1px solid var(--surface-2); }
 .recent a:last-child { border-bottom: none; }
 .deck-field { margin-top: 24px; }
+.recent-row { display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--surface-2); }
+.recent-row:last-child { border-bottom: none; }
+.recent-row a { flex: 1; min-width: 0; gap: 8px; border-bottom: none !important; }
+.recent-row a .mono { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-row a > .muted { flex: none; }
+.row-act { flex: none; border-color: transparent; background: transparent; color: var(--muted); width: 36px; height: 36px; margin-right: -8px; }
+.row-act:hover:not(:disabled) { color: var(--bad); border-color: var(--border); }
+.row-act svg.i { width: 18px; height: 18px; }
+.nr { display: inline-flex; align-items: center; gap: 2px; }
+.nr-del { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: none; background: none; color: inherit; border-radius: 8px; opacity: .8; }
+.nr-del:hover { opacity: 1; background: color-mix(in srgb, currentColor 12%, transparent); }
+.nr-del svg.i { width: 16px; height: 16px; }
+.create-btn:disabled { opacity: .55; cursor: not-allowed; }
+.room-sheet { max-width: 420px; gap: 12px; }
+.room-sheet h2 { font-size: 24px; }
+.room-sheet p { margin: 0; }
+.sheet-code { font-size: 15px; padding: 8px 12px; border-radius: 10px; background: var(--surface-2); align-self: flex-start; word-break: break-all; }
+.sheet-error { color: var(--bad); font-size: 14px; }
+.sheet-actions { display: flex; gap: 10px; margin-top: 8px; }
+.sheet-actions .btn { flex: 1; }
+.btn-danger-solid { background: var(--bad); border-color: var(--bad); color: #fff; }
+.btn-danger-solid:hover:not(:disabled) { filter: brightness(1.08); }
+.danger-zone .btn svg.i { width: 16px; height: 16px; }
 .create-btn { width: 100%; margin-top: 28px; }
 .recent-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px; }
 .pager { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }

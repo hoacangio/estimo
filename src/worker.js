@@ -54,11 +54,45 @@ export default {
       return stub.fetch(fwd);
     }
 
-    if (url.pathname === "/api/health") return Response.json({ ok: true });
+    if (url.pathname.startsWith("/api/")) return handleApi(req, url, env);
 
     return env.ASSETS.fetch(req);
   },
 };
+
+/**
+ * REST endpoints (also used by scripts/local-server.mjs).
+ *   GET  /api/health
+ *   POST /api/host/rooms          { id }  — the rooms this browser hosts, and the limit
+ *   POST /api/rooms/:code/delete  { id }  — host deletes a room without joining it
+ * The secret client id is the credential (sent in the body, never the URL); only its hash
+ * is stored as the room's host key.
+ */
+export async function handleApi(req, url, env) {
+  const json = (body, status = 200, headers) => Response.json(body, { status, headers });
+  if (url.pathname === "/api/health") return json({ ok: true });
+  const del = url.pathname.match(/^\/api\/rooms\/([^/]+)\/delete$/);
+  if (!del && url.pathname !== "/api/host/rooms") return json({ ok: false, code: "not_found" }, 404);
+  if (req.method !== "POST") return json({ ok: false, code: "method" }, 405, { Allow: "POST" });
+  if (!isAllowedOrigin(req.headers.get("Origin"), url.host)) return json({ ok: false, code: "origin" }, 403);
+  if (!(req.headers.get("Content-Type") || "").startsWith("application/json")) return json({ ok: false, code: "bad_request" }, 415);
+  const text = await req.text();
+  if (text.length > 200) return json({ ok: false, code: "bad_request" }, 413);
+  let body; try { body = JSON.parse(text); } catch { body = null; }
+  const id = body && typeof body === "object" && typeof body.id === "string" && CLIENT_ID_RE.test(body.id) ? body.id : "";
+  if (!id) return json({ ok: false, code: "bad_request" }, 400);
+  const max = Number(env.MAX_ROOMS_PER_HOST) || DEFAULT_MAX_ROOMS_PER_HOST;
+
+  if (!del) {
+    const key = await hostKey(id);
+    const rooms = await env.HOSTS.get(env.HOSTS.idFromName(key)).list();
+    return json({ ok: true, rooms, max });
+  }
+  const room = del[1].toLowerCase();
+  if (!ROOM_RE.test(room)) return json({ ok: false, code: "bad_request" }, 400);
+  const res = await env.ROOM.get(env.ROOM.idFromName(room)).deleteByHost(id, room);
+  return json({ ...res, max }, res.ok ? 200 : 403);
+}
 
 /* ------------------------------------------------------------------ *
  * One Durable Object instance = one room.
@@ -245,6 +279,18 @@ export class Room extends DurableObject {
       return res;
     })();
     try { return await this.creating; } finally { this.creating = null; }
+  }
+
+  // RPC from the edge Worker: the host deletes the room from the home page.
+  async deleteByHost(secretId, code) {
+    const key = await hostKey(secretId);
+    if (!this.s.exists) { // already gone (expired or deleted): just free a stale slot, if any
+      try { await this.#registry(key).release(code); } catch {}
+      return { ok: true, gone: true };
+    }
+    if (this.s.host?.key !== key) return { ok: false, code: "forbidden" };
+    await this.#destroy("deleted");
+    return { ok: true };
   }
 
   // Delete everything and free the host's slot; connected clients are told why.

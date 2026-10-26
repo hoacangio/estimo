@@ -16,8 +16,9 @@ Runs entirely on **Cloudflare Workers + Durable Objects** and fits comfortably i
 - Keyboard shortcuts `1`–`0`, dark mode
 - **One-screen home on phones:** just the form, join box and recent rooms (paged, rows adapt to the screen height)
 - **One-screen room:** topic, table and your cards always fit the viewport without scrolling; participants, history and settings live in a sidebar (a slide-in drawer on phones and tablets)
-- **Hosts:** whoever creates a room is its host; only the host can delete it (everyone in the room is notified)
-- **Room limit per host:** 5 by default — change `MAX_ROOMS_PER_HOST` in `wrangler.toml` and redeploy
+- **Hosts:** whoever creates a room is its host; only the host can delete it — from the room's sidebar or straight from the home page (bottom-sheet confirm, no need to join); everyone in the room is notified and every list refreshes
+- **Room limit per host:** 5 by default — the home page checks the count and blocks **Create** at the limit (the server enforces it too). Change `MAX_ROOMS_PER_HOST` in `wrangler.toml` and redeploy
+- Recent rooms (last 20, 5 per page): delete the ones you host, or remove others from this device
 - **Installable app (PWA):** add to the home screen on Android, iOS and desktop; opens full screen and launches from cache even offline
 - **App-like feel:** press feedback on every control, animated screen changes (View Transitions), bottom-sheet invite on phones, cards dealt onto the table as votes arrive, smooth progress, skeleton loading; all motion respects `prefers-reduced-motion`
 - **Fun themes**, lazy-loaded so the default theme pays nothing (Retro 2007 also via the Konami code ↑↑↓↓←→←→BA)
@@ -39,6 +40,16 @@ Browser ──HTTPS──▶ Static Assets (edge cache)      public/
 | `public/index.html` | The whole UI: vanilla JS, no build step |
 | `public/qr.js` | Dependency-free QR encoder (byte mode, level M, versions 1–10) |
 | `scripts/local-server.mjs` | Offline dev server that runs the real `Room` class without wrangler or npm |
+
+### REST API
+
+| Endpoint | Body | Result |
+| --- | --- | --- |
+| `GET /api/health` | — | `{ ok: true }` |
+| `POST /api/host/rooms` | `{ id }` | Rooms hosted by this browser and the limit: `{ ok, rooms, max }` |
+| `POST /api/rooms/:code/delete` | `{ id }` | Host deletes the room; `403` for anyone else |
+
+`id` is the browser's secret client id, sent in a JSON body (never the URL). Requests must be same-origin and `application/json`.
 
 ### WebSocket protocol
 
