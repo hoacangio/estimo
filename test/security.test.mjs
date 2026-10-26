@@ -15,7 +15,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const room = (tag) => `sec-${tag}-${crypto.randomBytes(3).toString("hex")}`;
 
 /* ---------- tiny client ---------- */
-function client(roomId, name, { id = crypto.randomUUID(), spectator = false, join = true, create = true } = {}) {
+// Like the app: only the first client in a room asks to create it; later ones just join.
+const creators = new Map();
+function client(roomId, name, { id = crypto.randomUUID(), spectator = false, join = true, create } = {}) {
+  if (create === undefined) { create = !creators.has(roomId) || creators.get(roomId) === id; if (create) creators.set(roomId, id); }
   const ws = new WebSocket(`${WS_BASE}/ws/${roomId}`);
   const c = { ws, id, name, states: [], raw: [], closed: null, last: null };
   ws.onmessage = (e) => {
@@ -68,8 +71,8 @@ console.log(`Estimo security tests → ${BASE.origin}\n`);
 
 /* 1. Confidentiality of votes */
 await test("S01", "Votes are not sent to other clients before reveal", async () => {
-  const r = room("leak"); const a = client(r, "Alice"), b = client(r, "Bob");
-  await Promise.all([a.ready, b.ready]); await a.settle();
+  const r = room("leak"); const a = client(r, "Alice"); await a.ready; await a.settle(200);
+  const b = client(r, "Bob"); await b.ready; await a.settle();
   a.send({ t: "vote", v: "13" }); await b.settle(400);
   const after = b.raw.slice(-3).join("\n");
   assert(!/"vote":"13"/.test(after), "Bob received Alice's vote value before reveal");
@@ -87,8 +90,8 @@ await test("S02", "Secret client ids are never broadcast", async () => {
 });
 
 await test("S03", "Cannot impersonate another participant to change their vote", async () => {
-  const r = room("imp"); const victim = client(r, "Victim"), atk = client(r, "Mallory");
-  await Promise.all([victim.ready, atk.ready]); await atk.settle();
+  const r = room("imp"); const victim = client(r, "Victim"); await victim.ready; await victim.settle(200);
+  const atk = client(r, "Mallory"); await atk.ready; await atk.settle();
   victim.send({ t: "vote", v: "5" }); await atk.settle();
   // Attacker reuses every id it can observe and tries to overwrite / withdraw the victim's vote
   const seen = atk.last.participants.find((p) => p.name === "Victim")?.id;
@@ -285,6 +288,16 @@ await test("S20", "Host room list is per secret id and never leaks another host'
   const other = await (await post("/api/host/rooms", { id: crypto.randomUUID() })).json();
   assert(mine.rooms.length === 1 && mine.max >= 1 && other.rooms.length === 0, "host room list is wrong or leaks");
   c.close();
+});
+
+await test("S21", "Creating a room whose code is taken by another host is refused (no silent join)", async () => {
+  const r = room("dup"), owner = crypto.randomUUID();
+  const a = client(r, "Owner", { id: owner }); await a.ready; await a.settle(250);
+  const b = client(r, "Other", { create: true }); await b.ready; await b.settle(300);
+  assert(b.closed?.code === 4009 && b.raw.some((m) => m.includes('"exists"')), "second creator joined someone else's room");
+  const again = client(r, "Owner", { id: owner, create: true }); await again.ready; await again.settle(300);
+  assert(!again.closed, "the owner could not rejoin their own room");
+  [a, again].forEach((c) => c.close());
 });
 
 const failed = results.filter((r) => !r.ok);

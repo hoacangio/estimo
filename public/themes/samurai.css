@@ -4,6 +4,7 @@
    ===================================================================== */
 
 :root[data-theme="samurai"] {
+  --on-accent: #fff;
   --bg: #f3ead8; --surface: #fbf6ea; --surface-2: #ece2cc;
   --border: #d8c9a8; --border-strong: #b9a67e; --dash: #9b8a66;
   --ink: #1c1a17; --ink-2: #3a342b; --muted: #5c5444;

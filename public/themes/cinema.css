@@ -5,6 +5,7 @@
    ===================================================================== */
 
 :root[data-theme="cinema"] {
+  --on-accent: #fff;
   --bg: #141414; --surface: #1c1c1c; --surface-2: #101010;
   --border: #2c2c2c; --border-strong: #454545; --dash: #5c5c5c;
   --ink: #ffffff; --ink-2: #e5e5e5; --muted: #b3b3b3;

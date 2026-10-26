@@ -30,6 +30,7 @@ const ICON = {
   pen: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
   x: '<path d="M6 6l12 12M18 6 6 18"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
   cup: '<path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><path d="M6 2v2M10 2v2M14 2v2"/>',
   expand: '<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>',
@@ -125,7 +126,9 @@ applyTheme();
 const ADJ = ["calm","brave","swift","quiet","bright","lucky","clever","gentle","bold","merry","sunny","witty","eager","fuzzy","jolly","keen","mellow","nimble","proud","tidy"];
 const NOUN = ["otter","falcon","panda","tiger","koala","heron","lotus","maple","comet","river","harbor","cedar","finch","lynx","orca","pebble","quokka","sparrow","willow","yak"];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
-const newRoomCode = () => `${pick(ADJ)}-${pick(NOUN)}-${10 + Math.floor(Math.random() * 90)}`;
+// Short codes that are easy to read out: TIGER-472. Shown in capitals, stored lowercase.
+const CODE_WORDS = ["otter","falcon","panda","tiger","koala","heron","lotus","maple","comet","river","cedar","finch","lynx","orca","yak","bison","cobra","eagle","gecko","hawk","ibis","lemur","llama","moose","newt","owl","puma","raven","robin","seal","shark","swan","tapir","viper","wolf","zebra","delta","pixel","rocket","mango"];
+const newRoomCode = () => `${pick(CODE_WORDS)}-${100 + Math.floor(Math.random() * 900)}`;
 const normalizeCode = (s) => String(s || "").trim().toLowerCase().replace(/^.*\/r\//, "").replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
 const validCode = (s) => /^[a-z0-9-]{3,40}$/.test(s);
 
@@ -155,10 +158,7 @@ function parseRoute() {
 // Big UI changes (screens, dialogs, themes) animate with the View Transitions API.
 // Realtime updates never do: they must stay instant.
 const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
-function withTransition(update) {
-  if (!document.startViewTransition || reducedMotion() || isRetro()) return update();
-  document.startViewTransition(update);
-}
+function withTransition(update) { update(); } // screen changes are instant (no slide/fade)
 function go(path) { history.pushState(null, "", path); withTransition(onRoute); }
 function onRoute() {
   parseRoute();
@@ -234,6 +234,11 @@ function onServerError(msg) {
     ui.pendingCreate = null;
     ui.limitInfo = { max: msg.max, rooms: Array.isArray(msg.rooms) ? msg.rooms : [] };
     disconnect(); go("/");
+  } else if (msg.code === "exists") { // the random code belongs to someone else's room: try another
+    if (ui.pendingCreate !== ui.room) return;
+    const code = newRoomCode();
+    ui.pendingCreate = code; disconnect();
+    history.replaceState(null, "", `/r/${code}`); onRoute();
   } else if (msg.code === "forbidden") {
     toast("Only the host can do that.");
   }
@@ -404,7 +409,7 @@ function render() {
   if (bar && bar.style.width !== bar.dataset.to + "%") { void bar.offsetWidth; bar.style.width = bar.dataset.to + "%"; }
 
   if (keep) { const el = document.getElementById(keep.id); if (el) { if (el.tagName === "INPUT" && !el.readOnly && keep.value != null) el.value = keep.value; el.focus(); try { if (keep.start != null) el.setSelectionRange(keep.start, keep.end); } catch {} } }
-  document.title = ui.route === "room" ? `${ui.room} · Estimo` : "Estimo — planning poker";
+  document.title = ui.route === "room" ? `${String(ui.room).toUpperCase()} · Estimo` : "Estimo — planning poker";
 }
 
 function themeBtn(size = "") {
@@ -440,7 +445,7 @@ function viewHome() {
   <div class="home${ui.homeTight ? " tight" : ""}">
     <header>
       <a class="logo" href="/" data-nav="/">${LOGO}<b>Estimo</b></a>
-      ${themeBtn()}
+      <span class="theme-btns"><button class="btn btn-icon" data-act="theme" aria-label="${isDark() ? "Switch to light mode" : "Switch to dark mode"}">${icon(isDark() ? "sun" : "moon")}</button><button class="btn btn-icon" data-act="openSettings" aria-label="Settings">${icon("gear")}</button></span>
     </header>
     ${retroTicker()}
     <main>
@@ -468,7 +473,7 @@ function viewHome() {
           <label class="label join-label" for="code">Join a room</label>
           <form id="join-form" class="join-row">
             
-            <input class="input" id="code" value="${esc(ui.draftCode ?? "")}" placeholder="e.g. calm-otter-42" autocapitalize="off" autocomplete="off" spellcheck="false">
+            <input class="input" id="code" value="${esc(ui.draftCode ?? "")}" placeholder="e.g. TIGER-472" autocapitalize="off" autocomplete="off" spellcheck="false">
             <button class="btn" type="submit" style="height:48px;border-color:var(--ink)">${T("Join", "Vào!")}</button>
           </form>
           ${ui.limitInfo ? `<div class="notice" id="limit-note" role="status"><strong>You host ${ui.limitInfo.max} of ${ui.limitInfo.max} rooms.</strong> Delete one to create a new room${ui.limitInfo.rooms.every((c) => recent.some((r) => r.code === c)) ? " (trash icon in Recent rooms)." : ":"}
@@ -487,9 +492,27 @@ function viewHome() {
       </div>
     </main>
     ${isRetro() ? retroFooter() : `<footer><span>Rooms are deleted after 30 days of inactivity.</span><span>v1.0</span></footer>`}
-  </div>${ui.sheet ? viewRoomSheet() : ""}`;
+  </div>${ui.sheet ? viewSheet() : ""}`;
 }
 // Bottom sheet (dialog on desktop): delete a room you host, or drop one from the list
+function viewSheet() { return ui.sheet.kind === "settings" ? viewSettingsSheet() : viewRoomSheet(); }
+function viewSettingsSheet() {
+  const o = oneShot(ui.sheet.at, 340, "enter"), cur = currentTheme();
+  const opts = [["", "Default"], ...Object.entries(FUN_THEMES).map(([k, t]) => [k, t.label])];
+  return `
+  <div class="overlay${o.cls}"${o.style} data-act="closeSheet">
+    <div class="dialog room-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" data-stop>
+      <span class="sheet-handle" aria-hidden="true"></span>
+      <h2 id="sheet-title">Settings</h2>
+      <div class="set-row"><span>Dark mode</span><button class="btn btn-sm" data-act="theme" ${FUN_THEMES[cur] ? "disabled" : ""}>${isDark() ? "On" : "Off"}</button></div>
+      <div class="theme-list" role="radiogroup" aria-label="Theme">
+        <span class="label">Theme</span>
+        ${opts.map(([k, l]) => `<button class="theme-opt" role="radio" aria-checked="${(FUN_THEMES[cur] ? cur : "") === k}" data-act="pickTheme" data-theme="${k}">${esc(l)}${(FUN_THEMES[cur] ? cur : "") === k ? icon("check") : ""}</button>`).join("")}
+      </div>
+      <button class="btn btn-lg" data-act="closeSheet">Done</button>
+    </div>
+  </div>`;
+}
 function viewRoomSheet() {
   const { code, host, busy, error } = ui.sheet;
   const o = oneShot(ui.sheet.at, 340, "enter");
@@ -562,7 +585,7 @@ function viewRoomError() {
     ? "Check the room code or ask the host for a new link."
     : "Create a new room from the home page.";
   return `<div class="gate"><div class="inner"><a class="logo" href="/" data-nav="/">${LOGO}<b>Estimo</b></a>
-    <p class="muted" style="margin:56px 0 0">${esc(e.room)}</p>
+    <p class="muted room-code" style="margin:56px 0 0">${esc(e.room)}</p>
     <h1 style="font-family:var(--serif);font-weight:500;margin:8px 0 12px">${title}</h1>
     <p class="muted" style="margin:0 0 28px">${hint}</p>
     <a class="btn btn-primary btn-lg" href="/" data-nav="/">Go to home</a></div></div>`;
@@ -581,7 +604,7 @@ function viewGate() {
     <a class="logo" href="/" data-nav="/">${LOGO}<b>Estimo</b></a>
     <div style="margin-top:56px">
       <span style="font-size:14px;font-weight:500;color:var(--accent-ink)">Join room</span>
-      <h1>${esc(ui.room)}</h1>
+      <h1 class="room-code">${esc(ui.room)}</h1>
     </div>
     <form id="gate-form" style="margin-top:32px;display:flex;flex-direction:column;flex:1">
       <label class="label" for="gnick" style="font-size:15px">Your nickname</label>
@@ -630,7 +653,7 @@ function viewRoom() {
       </aside>
     </div>
     ${ui.drawerOpen ? `<div class="scrim" data-act="closeDrawer"${anim.style}></div>` : ""}
-  </div>` + (ui.showInvite ? viewInvite() : "") + (ui.sheet ? viewRoomSheet() : "");
+  </div>` + (ui.showInvite ? viewInvite() : "") + (ui.sheet ? viewSheet() : "");
 }
 function openDrawer() { ui.drawerOpen = true; ui.drawerAt = performance.now(); ui.drawerLeaveAt = null; render(); }
 function closeDrawer() {
@@ -805,7 +828,7 @@ function viewInvite() {
       <div class="full-hide">
         <label class="label" for="link" style="font-size:13px">Room link</label>
         <div class="join-row"><input class="input" id="link" readonly value="${esc(roomUrl())}" style="height:44px;font-size:13px;background:var(--bg)"><button class="btn btn-primary" data-act="copy" style="height:44px">Copy</button></div>
-        <div class="hint">Or enter code <strong style="font-weight:600;color:var(--ink)">${esc(ui.room)}</strong> on the home page.</div>
+        <div class="hint">Or enter code <strong class="room-code" style="font-weight:600;color:var(--ink)">${esc(ui.room)}</strong> on the home page.</div>
       </div>
       <div class="actions full-hide" style="border-top:1px solid var(--surface-2);padding-top:18px">
         <button class="btn" data-act="fullInvite" style="flex:1 1 160px">${icon("expand")}Show full screen</button>
@@ -836,7 +859,7 @@ function downloadPng() {
     const c = document.createElement("canvas"); c.width = c.height = size;
     const g = c.getContext("2d"); g.imageSmoothingEnabled = false; g.drawImage(img, 0, 0, size, size);
     const m = size * 0.14; g.fillStyle = "#fff"; g.fillRect((size - m) / 2, (size - m) / 2, m, m);
-    g.fillStyle = "#D97757"; const k = m * 0.72; g.fillRect((size - k) / 2, (size - k) / 2, k, k);
+    g.fillStyle = "#F5A524"; const k = m * 0.72; g.fillRect((size - k) / 2, (size - k) / 2, k, k);
     const a = document.createElement("a"); a.download = `estimo-${ui.room}.png`; a.href = c.toDataURL("image/png"); a.click();
   };
   img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
@@ -893,6 +916,8 @@ document.addEventListener("click", (e) => {
     case "skip": send({ t: "next", topic: "" }); break;
     case "next": send({ t: "next", topic: "", final: ui.final }); break;
     case "final": ui.final = el.dataset.v; render(); break;
+    case "openSettings": ui.sheet = { kind: "settings", at: performance.now() }; render(); break;
+    case "pickTheme": LS.set("theme", FUN_THEMES[el.dataset.theme] ? el.dataset.theme : "system"); applyTheme(); ui.fitKey = null; render(); if (FUN_THEMES[el.dataset.theme]) toast(FUN_THEMES[el.dataset.theme].hello); break;
     case "roomSheet": openRoomSheet(el.dataset.code, el.dataset.host === "1"); break;
     case "closeSheet": closeSheet(); break;
     case "confirmSheet": confirmSheet(); break;
@@ -943,7 +968,7 @@ document.addEventListener("submit", (e) => {
   } else if (f.id === "join-form") {
     const code = normalizeCode($("#code").value);
     const n = $("#nick").value.trim().slice(0, 24);
-    if (!validCode(code)) { ui.joinError = "Enter a room code like calm-otter-42."; render(); return; }
+    if (!validCode(code)) { ui.joinError = "Enter a room code like TIGER-472."; render(); return; }
     if (n) me.name = n;
     ui.joinError = ""; go(`/r/${code}`);
   } else if (f.id === "gate-form") {

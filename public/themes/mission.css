@@ -5,6 +5,7 @@
    ===================================================================== */
 
 :root[data-theme="mission"] {
+  --on-accent: #031018;
   --bg: #05080f; --surface: #0b1220; --surface-2: #0e1729;
   --border: #1c2a44; --border-strong: #2b4268; --dash: #3f5a85;
   --ink: #e6f1ff; --ink-2: #c5d6ee; --muted: #8aa0bf;

@@ -6,7 +6,7 @@ Runs entirely on **Cloudflare Workers + Durable Objects** and fits comfortably i
 
 ## Features
 
-- Rooms by link, room code or **QR code** (generated in the browser, no external service)
+- Rooms by link, short room code (e.g. `TIGER-472`, case-insensitive) or **QR code** (generated in the browser, no external service)
 - Voting scales: **Fibonacci**, **Modified Fibonacci**, **1–10**, **T-shirt**, **Powers of 2** (plus `?` and ☕)
 - Votes stay hidden on the server until reveal — clients never receive other people's values early
 - Results: average, median, range, agreement, distribution, outlier highlight, suggested final estimate
@@ -20,8 +20,9 @@ Runs entirely on **Cloudflare Workers + Durable Objects** and fits comfortably i
 - **Room limit per host:** 5 by default — the home page checks the count and blocks **Create** at the limit (the server enforces it too). Change `MAX_ROOMS_PER_HOST` in `wrangler.toml` and redeploy
 - Recent rooms (last 20, 5 per page): delete the ones you host, or remove others from this device
 - **Installable app (PWA):** add to the home screen on Android, iOS and desktop; opens full screen and launches from cache even offline
-- **App-like feel:** press feedback on every control, animated screen changes (View Transitions), bottom-sheet invite on phones, cards dealt onto the table as votes arrive, smooth progress, skeleton loading; all motion respects `prefers-reduced-motion`
-- **Fun themes**, lazy-loaded so the default theme pays nothing (Retro 2007 also via the Konami code ↑↑↓↓←→←→BA)
+- **App-like feel, kept quiet:** press feedback on controls, bottom sheets on phones, reveal flip, smooth progress, skeleton loading; all motion respects `prefers-reduced-motion`
+- **Brand:** Marigold amber `#F5A524` on warm neutrals; icons are generated from the tokens with `python3 scripts/make-icons.py`
+- **Fun themes** (home → ⚙ Settings, or the room's sidebar), lazy-loaded so the default theme pays nothing (Retro 2007 also via the Konami code ↑↑↓↓←→←→BA)
 
 ## Architecture
 

@@ -7,7 +7,7 @@
  *   and shows its "reconnecting" state instead of the browser's error page.
  * Realtime traffic (/ws/*) and the API (/api/*) are never touched.
  */
-const CACHE = "estimo-shell-v1";
+const CACHE = "estimo-shell-v2";
 const SHELL = [
   "/", "/app.js", "/qr.js", "/manifest.webmanifest",
   "/icons/icon-192.png", "/icons/icon-512.png", "/icons/maskable-512.png", "/icons/apple-touch-icon.png",

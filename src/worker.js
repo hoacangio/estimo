@@ -170,6 +170,9 @@ export class Room extends DurableObject {
           if (msg.create !== true) return this.#reject(ws, { code: "not_found" }, 4004);
           const created = await this.#create(id, pid);
           if (!created.ok) return this.#reject(ws, { code: "room_limit", max: this.maxRooms, rooms: created.rooms }, 4003);
+        } else if (msg.create === true && s.host?.key !== await hostKey(id)) {
+          // A new room's random code is already taken by someone else's room: never join it silently.
+          return this.#reject(ws, { code: "exists" }, 4009);
         }
         ws.serializeAttachment({ id, pid, name, spectator: msg.spectator === true });
         persist = false;
