@@ -5,6 +5,7 @@
  *
  *   Women's Day  15 Feb – 8 Mar
  *   Tết          21 days before mùng 1 – mùng 7
+ *   Programmers' Day  3 weeks before the 256th day of the year (13 Sep, or 12 Sep in leap years)
  *   Halloween    10 – 31 Oct
  *   Christmas     4 – 26 Dec
  */
@@ -37,6 +38,7 @@ export function activeSeasons(date = new Date()) {
   const windows = [
     ["tet", tetWindow(year)],
     ["womensday", before(3, 8)],
+    ["programmers", [fixed(year, 1, 1) + 255 - LEAD_DAYS, fixed(year, 1, 1) + 255]], // day 256 = 0x100
     ["halloween", before(10, 31)],
     ["christmas", [fixed(year, 12, 25) - LEAD_DAYS, fixed(year, 12, 26)]],
   ];

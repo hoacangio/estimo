@@ -1,0 +1,52 @@
+/* =====================================================================
+   Estimo — "Programmers' Day" seasonal theme: a dark code editor, terminal green,
+   syntax-coloured accents. Day 256 (0x100) of the year; scoped under [data-theme="programmers"].
+   ===================================================================== */
+
+:root[data-theme="programmers"] {
+  --bg: #0d1117; --surface: #161b22; --surface-2: #1c2330;
+  --border: #2a3240; --border-strong: #3a4454; --dash: #5c6878;
+  --ink: #e6edf3; --ink-2: #c9d1d9; --muted: #8b97a6;
+  --accent: #3fb950; --on-accent: #04130a; --accent-ink: #56d364; --accent-soft: #12301c; --accent-soft-ink: #7ee787;
+  --btn: #e6edf3; --btn-ink: #0d1117; --good: #56d364; --bad: #ff7b72;
+  --outlier: #d2a8ff; --outlier-bg: #2a1f40; --outlier-ink: #e2c5ff;
+  --track: #2a3240; --bar-2: #238636; --shadow: rgba(0, 0, 0, .5); --overlay: rgba(1, 4, 9, .72);
+  --serif: "JetBrains Mono", "SF Mono", Menlo, monospace;
+  --p-blue: #79c0ff; --p-orange: #ffa657;
+  color-scheme: dark;
+}
+
+/* faint editor gutter: line numbers on the left edge */
+[data-theme="programmers"] body {
+  background:
+    linear-gradient(90deg, #0b0f14 0 44px, #1c2330 44px 45px, transparent 45px),
+    repeating-linear-gradient(180deg, transparent 0 23px, rgba(139, 151, 166, .04) 23px 24px),
+    #0d1117;
+  background-attachment: fixed;
+}
+[data-theme="programmers"] .topbar,
+[data-theme="programmers"] .home header { background: #010409; border-bottom: 1px solid var(--border-strong); }
+[data-theme="programmers"] .logo b { font-family: var(--serif); letter-spacing: -.5px; }
+[data-theme="programmers"] .logo b::before { content: "~/"; color: var(--muted); }
+[data-theme="programmers"] .logo .back { stroke: var(--p-blue); }
+[data-theme="programmers"] .logo .front { fill: var(--accent); }
+[data-theme="programmers"] .code::before { content: "$ cd "; color: var(--muted); text-transform: none; }
+
+/* face-down cards show a code tag: </> */
+[data-theme="programmers"] .pcard.down {
+  position: relative; background: #12301c; border: 2px solid var(--accent); box-shadow: 0 0 12px rgba(63, 185, 80, .25);
+}
+[data-theme="programmers"] .pcard.down::after {
+  content: "</>"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font: 700 13px var(--serif); color: var(--accent-soft-ink);
+}
+[data-theme="programmers"] .pcard.up, [data-theme="programmers"] .vcard, [data-theme="programmers"] .kpi b { font-family: var(--serif); }
+[data-theme="programmers"] .vcard[aria-pressed="true"] { box-shadow: 0 0 16px rgba(63, 185, 80, .45); }
+[data-theme="programmers"] .progress div { background: linear-gradient(90deg, var(--p-blue), var(--accent)); }
+[data-theme="programmers"] .topic input::placeholder { color: var(--muted); }
+[data-theme="programmers"] .topic label::before { content: "// "; color: var(--muted); }
+
+/* blinking cursor after the greeting */
+[data-theme="programmers"] .season-strip { background: #010409; color: var(--accent-soft-ink); font-family: var(--serif); font-weight: 500; border-bottom: 1px solid var(--border); }
+[data-theme="programmers"] .season-strip::after { content: "▍"; margin-left: 2px; animation: p-blink 1s steps(1) infinite; animation-delay: var(--clock, 0ms); }
+@keyframes p-blink { 50% { opacity: 0; } }

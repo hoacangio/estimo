@@ -22,7 +22,6 @@ function settingsSheet(app) {
         ${[["", "Default"], ...themes(false)].map(option).join("")}
         ${seasonal.length ? `<span class="label theme-group">Seasonal</span>${seasonal.map(option).join("")}` : ""}
       </div>
-      <label class="check set-check"><input type="checkbox" data-act="toggleSeasonal" ${theme.seasonalAuto ? "checked" : ""}>Switch to seasonal themes automatically<span class="muted"> (8/3, Tết, Halloween, Christmas — from 3 weeks before)</span></label>
       <button class="btn btn-lg" data-act="closeSheet">Done</button>`,
   });
 }

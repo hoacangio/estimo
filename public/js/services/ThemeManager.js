@@ -22,6 +22,8 @@ export const FUN_THEMES = {
                hello: "Happy International Women's Day! 🌷", banner: "🌷 Happy International Women's Day — 8/3" },
   tet:       { label: "Tết", dark: false, seasonal: true,
                hello: "Chúc mừng năm mới! 🧧", banner: "🧧 Chúc Mừng Năm Mới · Happy Tết" },
+  programmers: { label: "Programmers' Day", dark: true, seasonal: true, font: "family=JetBrains+Mono:wght@500;700",
+               hello: "Happy Programmers' Day! Day 0x100 🎉", banner: "⌨️ Happy Programmers' Day · day 0x100" },
   halloween: { label: "Halloween", dark: true, seasonal: true,
                hello: "Happy Halloween! 🎃", banner: "🎃 Happy Halloween" },
   christmas: { label: "Christmas", dark: false, seasonal: true,
@@ -62,16 +64,12 @@ export class ThemeManager {
     return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
   }
 
-  /** Seasonal themes switch on by themselves unless turned off in Settings. */
-  get seasonalAuto() { return storage.get("seasonalThemes", true); }
-  set seasonalAuto(on) { storage.set("seasonalThemes", !!on); this.apply(); }
-
   /**
    * The season shown automatically right now, or null. It applies only while the saved choice
    * is the default theme, and not after the user chose "Default" during this occurrence.
    */
   get autoSeason() {
-    if (!this.seasonalAuto || FUN_THEMES[this.saved]) return null;
+    if (FUN_THEMES[this.saved]) return null;
     const season = seasonOn();
     return season && storage.get("seasonDismissed", "") !== season.id ? season : null;
   }

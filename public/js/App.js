@@ -481,7 +481,6 @@ export class App {
     changeDeck: (el) => this.send({ t: "deck", deck: el.value }),
     chooseTheme: (el) => { const greeting = this.theme.choose(el.value); this.withTransition(() => this.render()); if (greeting) toast(greeting); },
     toggleSpectator: (el) => { storage.set("spectator", el.checked); this.send({ t: "spectator", on: el.checked }); },
-    toggleSeasonal: (el) => { this.theme.seasonalAuto = el.checked; this.ui.fitKey = null; this.withTransition(() => this.render()); },
   };
 
   /** Form submissions */

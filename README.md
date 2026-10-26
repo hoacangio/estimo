@@ -22,7 +22,7 @@ Runs entirely on **Cloudflare Workers + Durable Objects** and fits comfortably i
 - **Installable app (PWA):** add to the home screen on Android, iOS and desktop; opens full screen and launches from cache even offline
 - **App-like feel:** press feedback on every control (replayed after re-render, so quick taps show it too), card pop, screen transitions (View Transitions), bottom sheets on phones, reveal flip, smooth progress, skeleton loading; all motion respects `prefers-reduced-motion`
 - **Brand:** Marigold amber `#F5A524` on warm neutrals; icons are generated from the tokens with `python3 scripts/make-icons.py`
-- **Seasonal themes that switch on by themselves:** each exists only from 3 weeks before its day: Women's Day (15 Feb – 8 Mar), Tết (21 days before mùng 1 → mùng 7; Vietnamese dates through 2036 in `public/js/domain/seasons.js`), Halloween (10–31 Oct), Christmas (4–26 Dec). Outside that period they are not applied or offered. A greeting strip and a one-time toast appear; choosing *Default* skips that occasion, and ⚙ Settings has an on/off switch
+- **Seasonal themes that switch on by themselves:** each exists only from 3 weeks before its day: Women's Day (15 Feb – 8 Mar), Tết (21 days before mùng 1 → mùng 7; Vietnamese dates through 2036 in `public/js/domain/seasons.js`), Programmers' Day (3 weeks before day 256 = 13 Sep, 12 Sep in leap years), Halloween (10–31 Oct), Christmas (4–26 Dec). Outside that period they are not applied or offered. A greeting strip and a one-time toast appear; this is always on — choosing *Default* in ⚙ Settings skips that one occasion
 - **Fun themes** (home → ⚙ Settings, or the room's sidebar), lazy-loaded so the default theme pays nothing (Retro 2007 also via the Konami code ↑↑↓↓←→←→BA)
 
 ## Architecture
